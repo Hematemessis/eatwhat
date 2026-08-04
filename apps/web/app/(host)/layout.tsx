@@ -1,13 +1,7 @@
-import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
 import ThemeToggle from '@/components/host/ThemeToggle';
 
 export default async function HostLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
-
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       {/* Top nav */}
@@ -23,7 +17,7 @@ export default async function HostLayout({ children }: { children: React.ReactNo
           {process.env.NODE_ENV === 'development' && <Link href="/dev" style={{ fontSize: 12, color: 'var(--muted)', textDecoration: 'none', fontFamily: 'var(--fb)' }}>Dev</Link>}
           <Link href="/" style={{ fontSize: 12, color: 'var(--muted)', textDecoration: 'none', fontFamily: 'var(--fb)' }}>Demo</Link>
           <ThemeToggle />
-          <span style={{ fontSize: 11, color: 'var(--muted)', background: 'var(--bg)', border: '1px solid var(--border2)', borderRadius: 'var(--rs)', padding: '3px 8px', fontFamily: 'var(--fb)' }}>{user.email}</span>
+          <span style={{ fontSize: 11, color: 'var(--muted)', background: 'var(--bg)', border: '1px solid var(--border2)', borderRadius: 'var(--rs)', padding: '3px 8px', fontFamily: 'var(--fb)' }}>Demo host</span>
         </div>
       </header>
       {children}
