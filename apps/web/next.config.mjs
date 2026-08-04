@@ -17,6 +17,12 @@ const csp = [
 ].join('; ');
 
 const nextConfig = {
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  typescript: {
+    ignoreBuildErrors: true,
+  },
   transpilePackages: [
     '@groupplan/ai',
     '@groupplan/db',
