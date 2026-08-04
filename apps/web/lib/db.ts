@@ -5,7 +5,9 @@ import path from 'path';
 // Singleton connection
 // ---------------------------------------------------------------------------
 let _db: Database.Database | null = null;
-const DB_PATH = path.join(process.cwd(), 'data.db');
+const DB_PATH = process.env.VERCEL
+  ? path.join('/tmp', 'eatwhat.db')
+  : path.join(process.cwd(), 'data.db');
 
 export function getDb(): Database.Database {
   if (!_db) {
