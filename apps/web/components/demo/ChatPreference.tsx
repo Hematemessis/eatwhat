@@ -408,7 +408,7 @@ export default function ChatPreference({ currentUser, onPreferencesCollected }: 
           <div style={{ fontSize: 48, marginBottom: 16 }}>🐦</div>
           <h3 style={{ fontFamily: "var(--fd)", fontSize: 22, color: "var(--text)", marginBottom: 8 }}>请先选择一个用户</h3>
           <p style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.7, fontFamily: "var(--fb)" }}>
-            在顶部"模拟用户"栏中点击已有用户切换身份，<br />或输入新名字添加一个模拟用户。
+            在顶部&ldquo;模拟用户&rdquo;栏中点击已有用户切换身份，<br />或输入新名字添加一个模拟用户。
           </p>
         </div>
       )}
