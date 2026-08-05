@@ -4,6 +4,24 @@ AI 驱动的聚餐规划工具。发起人创建可分享的邀请链接，参�
 
 ![今天整点啥 截图](assets/image.jpg)
 
+## 在线体验
+
+**访问地址：** [https://eatwhat-web.vercel.app](https://eatwhat-web.vercel.app)
+
+### 使用方法
+
+1. 打开网页后输入昵称，进入聚会计划页面。
+2. 在「AI 对话」中选择只吃饭、只玩乐、吃饭加娱乐，或者让海鸥帮你决定。
+3. 按照提示逐步填写口味、忌口、预算、地点和活动偏好；每轮只需要回答一个问题。
+4. 信息收集完成后，可在「偏好」中查看整理结果，并前往「AI 推荐」生成聚会方案。
+5. 需要其他人一起参与时，点击「邀请好友」复制并分享网页链接。
+
+### 在线演示说明
+
+- 在线版部署在 Vercel，AI 对话使用 DeepSeek API。
+- 昵称和对话记录会保存在当前浏览器中；服务端演示数据使用临时存储，重新部署或实例重启后可能被清空。
+- 请勿在演示站中填写密码、身份证号等敏感个人信息。
+
 ## How it works
 
 1. Host creates an event with a location hint and RSVP deadline, then sends personalized invitation links
@@ -23,7 +41,7 @@ AI 驱动的聚餐规划工具。发起人创建可分享的邀请链接，参�
 | AI — vibe embeddings | Voyage AI (`voyage-3`) |
 | Venue search | Google Places API v1 (Yelp Fusion as fallback) |
 | Email | SendGrid |
-| Hosting | AWS Amplify |
+| Hosting | Vercel |
 
 ## Project structure
 
@@ -71,7 +89,7 @@ eatwhat/
 ### 1. Clone and install
 
 ```bash
-git clone https://github.com/toRolex/eatwhat.git
+git clone https://github.com/Hematemessis/eatwhat.git
 cd eatwhat
 pnpm install
 ```
