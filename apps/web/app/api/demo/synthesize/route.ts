@@ -17,8 +17,8 @@ export async function POST(request: NextRequest) {
     // Check API key availability
     if (!process.env.DEEPSEEK_API_KEY) {
       return NextResponse.json(
-        { error: "DEEPSEEK_API_KEY 未配置" },
-        { status: 500 },
+        { error: 'DeepSeek API key 未配置' },
+        { status: 503 },
       );
     }
 

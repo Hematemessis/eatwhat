@@ -1,256 +1,125 @@
-# 今天整点啥 (EatWhat)
+# 今天整点啥（EatWhat）
 
-AI 驱动的聚餐规划工具。发起人创建可分享的邀请链接，参与者提交口味偏好，12 阶段多模型 AI 流水线推荐真实附近餐厅并按群体匹配度排序。参与者通过 Borda 计分投票，发起人一键定案，所有人收到日历邀请。
+> 面向多人聚会决策的 AI 产品原型：收集成员偏好，识别冲突，并生成兼顾群体需求的聚餐/活动方案。
 
-![今天整点啥 截图](assets/image.jpg)
+[![CI](https://github.com/Hematemessis/eatwhat/actions/workflows/ci.yml/badge.svg)](https://github.com/Hematemessis/eatwhat/actions/workflows/ci.yml)
+[![在线体验](https://img.shields.io/badge/在线体验-eatwhat--web.vercel.app-111111)](https://eatwhat-web.vercel.app/)
 
-## 在线体验
+**在线体验：** [https://eatwhat-web.vercel.app/](https://eatwhat-web.vercel.app/)
 
-**访问地址：** [https://eatwhat-web.vercel.app](https://eatwhat-web.vercel.app)
+**项目仓库：** [https://github.com/Hematemessis/eatwhat](https://github.com/Hematemessis/eatwhat)
 
-### 使用方法
+![今天整点啥产品截图](screenshot-cn.png)
 
-1. 打开网页后输入昵称，进入聚会计划页面。
-2. 在「AI 对话」中选择只吃饭、只玩乐、吃饭加娱乐，或者让海鸥帮你决定。
-3. 按照提示逐步填写口味、忌口、预算、地点和活动偏好；每轮只需要回答一个问题。
-4. 信息收集完成后，可在「偏好」中查看整理结果，并前往「AI 推荐」生成聚会方案。
-5. 需要其他人一起参与时，点击「邀请好友」复制并分享网页链接。
+## 这是什么
 
-### 在线演示说明
+朋友聚会时，真正困难的往往不是“找一家店”，而是把每个人零散、含糊甚至互相冲突的需求整理成一个大家都能接受的方案。
 
-- 在线版部署在 Vercel，AI 对话使用 DeepSeek API。
-- 昵称和对话记录会保存在当前浏览器中；服务端演示数据使用临时存储，重新部署或实例重启后可能被清空。
-- 请勿在演示站中填写密码、身份证号等敏感个人信息。
+EatWhat 将这个过程拆成四步：
 
-## How it works
+1. 创建或加入一个聚会小组；
+2. 通过 AI 对话逐步填写口味、忌口、预算、地点和活动偏好；
+3. 汇总成员偏好，并让 AI 生成候选方案与推荐理由；
+4. 由群主综合结果做出最终决定。
 
-1. Host creates an event with a location hint and RSVP deadline, then sends personalized invitation links
-2. Guests RSVP and submit dietary restrictions, cuisine preferences, budget range, and a free-text vibe
-3. Host triggers AI synthesis — the V2 pipeline runs across Anthropic, Gemini, and Voyage AI to extract constraints, discover real nearby venues, embed vibe preferences, score and rerank candidates, verify proposals against hard constraints, and generate personalized reasoning for each guest
-4. Guests rank proposals; Borda count tallies votes in real time
-5. Host picks the winner (or sets a vote deadline for auto-finalize), confirms the time, and EatWhat sends a winner email with a `.ics` calendar attachment to every accepted guest
+## 在线体验说明
 
-## Tech stack
+当前 Vercel 版本是为产品路演准备的 **Demo 模式**，目标是让体验者无需注册、无需配置数据库即可走完主要体验：
 
-| Layer | Technology |
+- 输入昵称并创建/加入聚会；
+- 在「AI 对话」中收集个人偏好；
+- 在「偏好」页查看多人信息汇总；
+- 在「AI 推荐」中生成候选方案和推荐理由；
+- 在同一浏览器内切换成员，模拟多人协作。
+
+Demo 数据主要保存在当前浏览器和临时服务中，可能因清除浏览器数据、重新部署或实例重启而丢失。请勿填写密码、证件号码等敏感信息。
+
+### Demo 与完整系统的区别
+
+仓库中还保留了邀请、RSVP、投票、日历导出、邮件通知、Supabase 数据模型和多阶段 AI Pipeline 等完整系统模块。这些模块代表产品的工程化方向，但 **并不等于全部已在当前在线 Demo 中开放**。
+
+| 能力 | 在线 Demo | 仓库中的完整系统模块 |
+|---|---:|---:|
+| 昵称加入与创建聚会 | ✅ | ✅ |
+| AI 对话收集偏好 | ✅ | ✅ |
+| 多人偏好汇总 | ✅（浏览器内模拟） | ✅ |
+| AI 候选方案与解释 | ✅ | ✅ |
+| 独立分享链接与跨设备协作 | 暂未作为本轮重点 | 已有相关模块，待重新联调 |
+| RSVP、投票与最终定案 | 部分演示 | 已有相关模块，待重新联调 |
+| 邮件通知与 `.ics` 日历 | 未开放 | 已有相关模块，待重新联调 |
+
+## 产品亮点
+
+- **渐进式偏好采集**：每轮只问一个问题，降低填写负担；
+- **冲突显式化**：把忌口、预算和地点等硬约束与氛围偏好分开处理；
+- **群体而非单人推荐**：关注方案对所有成员的适配程度，而不是只输出“热门榜单”；
+- **推荐可解释**：候选方案同时展示匹配理由和可能的妥协点；
+- **面向路演的零配置体验**：打开链接即可体验，无需先部署数据库。
+
+## 技术架构
+
+这是一个 pnpm + Turborepo 管理的 TypeScript Monorepo。
+
+| 层级 | 技术 |
 |---|---|
-| Frontend | Next.js 14 (App Router) |
-| Database / Auth | Supabase (PostgreSQL + RLS + Realtime) |
-| AI — reasoning | Claude Haiku + Sonnet (Anthropic) |
-| AI — venue discovery | Gemini Flash (Google) |
-| AI — vibe embeddings | Voyage AI (`voyage-3`) |
-| Venue search | Google Places API v1 (Yelp Fusion as fallback) |
-| Email | SendGrid |
-| Hosting | Vercel |
+| Web | Next.js 15、React 18、TypeScript |
+| Demo 数据 | localStorage + SQLite 临时数据层 |
+| 完整数据模型 | Supabase / PostgreSQL / RLS（保留模块） |
+| AI | DeepSeek（在线 Demo）；Anthropic、Gemini、Voyage（Pipeline 模块） |
+| 测试 | Vitest、Playwright |
+| 工程化 | pnpm、Turborepo、GitHub Actions、Vercel |
 
-## Project structure
-
-```
+```text
 eatwhat/
-├── apps/
-│   └── web/                    # Next.js 14 app
-│       ├── app/
-│       │   ├── (auth)/         # Login + magic-link verify pages
-│       │   ├── (host)/         # Dashboard, event management, results
-│       │   │   └── dev/        # Internal tools: log viewer, cost dashboard, pipeline inspector
-│       │   ├── api/            # Route handlers (events, invites, votes, calendar…)
-│       │   ├── e/[slug]/       # Public event status page (shareable group chat link)
-│       │   └── invite/[slug]/  # Guest RSVP, preferences, vote, and confirmed pages
-│       ├── components/
-│       │   ├── forms/          # EventCreateForm, PreferenceForm, RSVPForm, FinalizeFlow
-│       │   ├── demo/           # Demo UI, tab components, modals
-│       │   ├── invite-templates/ # InviteView template system
-│       │   ├── realtime/       # GuestStatusList (Supabase realtime)
-│       │   └── ui/             # PreviewBanner, shared primitives
-│       └── lib/
-│           ├── auto-finalize.ts   # Check-on-read auto-finalize logic
-│           ├── calendar.ts        # ICS calendar export
-│           ├── email.ts           # SendGrid email rendering + sending
-│           ├── scoring.ts         # bordaScore(), computeBorda()
-│           └── event-status.ts    # STATUS_COLORS and STATUS_LABELS constants
+├── apps/web/            # Next.js 应用与在线 Demo
+│   ├── app/             # 页面与 API 路由
+│   ├── components/demo/ # 路演 Demo 组件
+│   └── lib/             # SQLite、推荐、通知等逻辑
 ├── packages/
-│   ├── types/        # Shared TypeScript types + Zod schemas
-│   ├── db/           # Supabase client + typed query helpers
-│   ├── ai/           # 12-stage V2 pipeline + legacy Claude adapter
-│   └── venues/       # Venue provider interface + Google Places / Yelp adapters
-└── supabase/
-    ├── migrations/   # PostgreSQL schema migrations (run in order, 001–015)
-    └── setup.sql     # Full schema for fresh installs
+│   ├── ai/              # AI Pipeline
+│   ├── db/              # Supabase 查询模块
+│   ├── types/           # 共享类型与 Zod Schema
+│   └── venues/          # 场地搜索适配器
+├── supabase/            # 数据库迁移与建表脚本
+└── tools/qa/            # QA 与视觉测试工具
 ```
 
-## Getting started
+## 本地运行
 
-### Prerequisites
-
-- Node.js ≥ 20
-- pnpm ≥ 9
-- A [Supabase](https://supabase.com) project
-
-### 1. Clone and install
+要求：Node.js 20+、pnpm 9+。
 
 ```bash
 git clone https://github.com/Hematemessis/eatwhat.git
 cd eatwhat
 pnpm install
-```
-
-### 2. Configure environment
-
-```bash
-cp .env.example apps/web/.env.local
-```
-
-Fill in all values in `apps/web/.env.local`. Required keys are listed below.
-
-### 3. Set up the database
-
-In the Supabase dashboard **SQL editor**, paste and run `supabase/setup.sql` for a fresh install.
-
-If migrating an existing schema, run each file in `supabase/migrations/` in numerical order:
-
-```
-001_enums.sql
-002_tables.sql
-003_rls.sql
-004_indexes.sql
-005_relax_rank_checks.sql
-006_usage_log.sql
-007_vote_deadline.sql
-008_replace_proposals_rpc.sql
-009_ai_pipeline.sql
-010_add_structured_constraint_columns.sql
-011_v2_hardening.sql
-012_event_categories.sql
-013_ai_logs_month_index.sql
-014_invitation_slugs.sql
-015_funnel_and_flags.sql
-```
-
-### 4. Run the dev server
-
-```bash
 pnpm dev
 ```
 
-App runs at [http://localhost:3000](http://localhost:3000). The host dashboard is at `/dashboard`.
+应用默认运行在 [http://localhost:3000](http://localhost:3000)。Demo 的基础页面无需 Supabase；AI 对话等服务能力需要按 `.env.example` 配置相应环境变量。
 
-## Environment variables
+## 质量检查
 
-### Core (required)
+```bash
+pnpm lint
+pnpm type-check
+pnpm test
+pnpm build
+```
 
-| Variable | Description |
-|---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key |
-| `SUPABASE_SERVICE_ROLE_KEY` | Service role key — server-only, never expose to client |
-| `ANTHROPIC_API_KEY` | Anthropic API key (Haiku + Sonnet) |
-| `ANTHROPIC_MODEL_FAST` | Haiku model ID, e.g. `claude-haiku-4-5-20251001` |
-| `ANTHROPIC_MODEL_REASONING` | Sonnet model ID, e.g. `claude-sonnet-4-6` |
-| `GOOGLE_PLACES_API_KEY` | Google Places API v1 key |
-| `PHOTO_PROXY_SECRET` | HMAC secret for photo proxy tokens |
+GitHub Actions 会在推送到 `main` 或创建 Pull Request 时执行上述检查。
 
-### Pipeline V2 (required when `PIPELINE_V2=true`)
+## Roadmap
 
-| Variable | Description |
-|---|---|
-| `GEMINI_API_KEY` | Google Gemini API key |
-| `GEMINI_MODEL` | Gemini model ID, e.g. `gemini-2.5-flash` |
-| `VOYAGE_API_KEY` | Voyage AI API key |
-| `VOYAGE_MODEL` | Voyage model ID, e.g. `voyage-3` |
-| `PIPELINE_V2` | Feature flag — `false` by default, set `true` to enable |
-| `PIPELINE_COST_CAP_MICROS` | Monthly spend cap per event in micros (default: 5000000 = $5.00) |
-| `PIPELINE_LOG_LEVEL` | `info` for production; `debug` logs raw AI payloads — never use in prod |
-| `ANTHROPIC_EXTENDED_THINKING` | `false` by default — only enable after verifying beta on your Anthropic account |
+- [ ] 重新联调独立分享链接和跨设备多人协作；
+- [ ] 完成手机端关键流程适配；
+- [ ] 统一 Demo 数据层与完整系统的数据模型；
+- [ ] 增加稳定的路演预置数据与一键重置；
+- [ ] 补充推荐质量、响应时间和完成率等产品指标。
 
-### Optional
+## 协作说明
 
-| Variable | Description |
-|---|---|
-| `YELP_API_KEY` | Yelp Fusion fallback if Google Places is unavailable |
-| `SENDGRID_API_KEY` | Email notifications (skipped gracefully if absent) |
-| `SENDGRID_FROM_EMAIL` | Sender address (required if SendGrid key set) |
-| `SENDGRID_FROM_NAME` | Sender display name (defaults to `EatWhat`) |
-| `NEXT_PUBLIC_APP_URL` | Full origin for email links (defaults to `http://localhost:3000`) |
-
-## Key features
-
-### AI Pipeline V2
-
-A 12-stage multi-provider pipeline, feature-flagged behind `PIPELINE_V2`. Each stage is independently logged to `ai_logs` for cost tracking and debugging.
-
-| Stage | Provider | Purpose |
-|---|---|---|
-| Dealbreaker detector | Anthropic Haiku | Identifies hard dietary/preference blocks |
-| Constraint extractor | Anthropic Haiku | Parses structured constraints from free-text preferences |
-| Implicit inference | Anthropic Haiku | Surfaces unstated preferences from vibe text |
-| Gemini discovery | Gemini Flash | Discovers real nearby venues via function calling |
-| Menu Phantom (Tier 1) | — | Infers dietary compatibility from venue signals |
-| Restaurant cache | Supabase | Deduplicates venue lookups across pipeline runs |
-| Deterministic scorer | — | TOPSIS scoring: dietary 30%, budget 25%, cuisine 20%, location 15%, review 10% |
-| Vibe embedder | Voyage AI | Embeds free-text vibe signals for semantic matching |
-| Deterministic reranker | — | Reranks candidates combining score + vibe similarity |
-| Fairness checker | — | Flags proposals that leave any guest without viable options |
-| Reasoning engine | Anthropic Sonnet | Generates group narrative and per-guest personalized reasoning |
-| Critic verifier | Anthropic Haiku | Removes any proposal that violates hard constraints |
-
-Guest references in all AI prompts are anonymized (`guest_0`, `guest_1`, etc.) — invitation UUIDs never enter a model context.
-
-**Cost circuit breaker:** triggers return HTTP 402 when monthly spend for an event reaches `PIPELINE_COST_CAP_MICROS`. Spend is tracked in `ai_logs` and visible in the host's usage badge and `/dev/costs`.
-
-### Voting
-
-- Guests rank proposals using a numbered rank selector
-- Borda count: with N proposals, rank-1 = N pts, rank-N = 1 pt
-- Live tally polled every 4s; paused during in-flight submissions to prevent race conditions
-- Host can re-run AI synthesis from `deciding` state (two-click confirm wipes existing votes)
-
-### Vote deadline & auto-finalize
-
-- Optional `vote_deadline` on events; left null for manual control
-- `maybeAutoFinalize()` runs on any read of the results, tally, or event page — idempotently locks in the Borda winner, inserts a `finalized_plans` row, and sends winner emails
-
-### Email notifications
-
-- All send sites use `sendBatch()` for consistent error logging
-- API responses include `{ emails: { sent, failed } }` so the host can see bounce counts
-
-### Dark mode
-
-- Toggled via the sun/moon button in the host header
-- State persisted to `localStorage.gp_tweaks.darkMode`
-- Synchronous `<script>` in `<head>` applies `html[data-theme="dark"]` before first paint to prevent flash
-
-### Public status page (`/e/[slug]`)
-
-- Shareable link for the group chat — shows live RSVP status via Supabase realtime
-- After finalization: venue card with name, cuisine, address, confirmed time, and "Open in Maps" button
-
-### Calendar export
-
-- `.ics` download at `/api/events/[id]/calendar` — auth-free (guests click from email)
-- Times emitted as UTC with `Z` suffix so every calendar app interprets them correctly
-- Includes `PRODID`, `STATUS:CONFIRMED`, and all accepted guests as attendees
-
-### Developer tools (`/dev/*`)
-
-Internal tooling for debugging and monitoring (host-auth gated):
-
-- `/dev/logs` — per-stage `ai_logs` viewer with cost and latency
-- `/dev/costs` — monthly spend by event with circuit breaker status
-- `/dev/pipeline/[id]` — full pipeline run inspector for a specific event
-
-## Security notes
-
-- All host-scoped API routes verify `event.host_id === user.id` (defense-in-depth on top of RLS)
-- Vote endpoint verifies the invite token belongs to the correct event and that the event is in `deciding` state
-- Service client is only used in server-only paths that require bypassing RLS (auto-finalize, calendar, tally)
-- Google Places photo URLs contain the API key — served through an HMAC-SHA256 signed proxy with a 24-hour TTL; expired or tampered tokens return 403
-- `PIPELINE_LOG_LEVEL=debug` must never be used in production — it persists raw AI payloads to `ai_logs`
-
-## Contributing
-
-This project uses [Conventional Commits](https://www.conventionalcommits.org/). Each PR should be focused and include a clear description of the change and why it was made.
+本项目由 [Hematemessis](https://github.com/Hematemessis) 与 [toRolex](https://github.com/toRolex) 协作开发。当前仓库基于 [toRolex/eatwhat](https://github.com/toRolex/eatwhat) fork，并由 Hematemessis 持续进行产品定位、在线 Demo、交互体验与工程化优化。
 
 ## License
 
-MIT
+[MIT](LICENSE)

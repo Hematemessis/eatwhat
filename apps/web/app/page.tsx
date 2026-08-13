@@ -116,12 +116,12 @@ export default function App() {
   // Fetch real guest data from Supabase if authenticated
   useEffect(() => {
     const supabase = createClient();
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    supabase.auth.getUser().then(({ data: { user } }: { data: { user: null } }) => {
       if (!user) return;
       supabase
         .from("invitations")
         .select("id, name, email, status, invite_token, guest_preferences(cuisine_prefs, dietary, budget_max, vibe_pref)")
-        .then(({ data }) => {
+        .then(({ data }: { data: Array<Record<string, unknown>> }) => {
           if (!data?.length) return;
           const mapped: Guest[] = data.map((inv: any, i: number) => {
             const prefs = Array.isArray(inv.guest_preferences) ? inv.guest_preferences[0] : inv.guest_preferences;

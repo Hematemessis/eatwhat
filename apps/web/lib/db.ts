@@ -1,5 +1,20 @@
 import Database from 'better-sqlite3';
 import path from 'path';
+import type {
+  Event as GroupEvent,
+  FinalizedPlan,
+  GuestPreferences,
+  Invitation,
+  Proposal,
+  Vote,
+} from '@groupplan/types';
+
+type DbResult<T> = { data: T; error: { message: string } | null };
+type DbRow<T> = T & Record<string, unknown>;
+
+function typedRow<T>(row: Record<string, unknown> | undefined): DbResult<DbRow<T> | null> {
+  return { data: (row as DbRow<T> | undefined) ?? null, error: row ? null : { message: 'Not found' } };
+}
 
 // ---------------------------------------------------------------------------
 // Singleton connection
@@ -201,22 +216,22 @@ function parseJson<T>(val: unknown): T | null {
 // ---------------------------------------------------------------------------
 // Events
 // ---------------------------------------------------------------------------
-export function getEventBySlug(slug: string) {
+export function getEventBySlug(slug: string): DbResult<DbRow<GroupEvent> | null> {
   const d = getDb();
   const row = d.prepare('SELECT * FROM events WHERE slug = ?').get(slug) as Record<string, unknown> | undefined;
-  return { data: row ?? null, error: row ? null : { message: 'Not found' } };
+  return typedRow<GroupEvent>(row);
 }
 
-export function getEventById(id: string) {
+export function getEventById(id: string): DbResult<DbRow<GroupEvent> | null> {
   const d = getDb();
   const row = d.prepare('SELECT * FROM events WHERE id = ?').get(id) as Record<string, unknown> | undefined;
-  return { data: row ?? null, error: row ? null : { message: 'Not found' } };
+  return typedRow<GroupEvent>(row);
 }
 
-export function getEventsByHost(hostId: string) {
+export function getEventsByHost(hostId: string): DbResult<Array<DbRow<GroupEvent>>> {
   const d = getDb();
   const rows = d.prepare('SELECT * FROM events WHERE host_id = ? ORDER BY created_at DESC').all(hostId) as Record<string, unknown>[];
-  return { data: rows, error: null };
+  return { data: rows as Array<DbRow<GroupEvent>>, error: null };
 }
 
 export function createEvent(hostId: string, input: Record<string, unknown>, slug: string) {
@@ -273,22 +288,22 @@ export function deleteEvent(id: string) {
 // ---------------------------------------------------------------------------
 // Invitations
 // ---------------------------------------------------------------------------
-export function getInvitationByToken(token: string) {
+export function getInvitationByToken(token: string): DbResult<DbRow<Invitation> | null> {
   const d = getDb();
   const row = d.prepare('SELECT * FROM invitations WHERE invite_token = ?').get(token) as Record<string, unknown> | undefined;
-  return { data: row ?? null, error: row ? null : { message: 'Not found' } };
+  return typedRow<Invitation>(row);
 }
 
-export function getInvitationBySlug(slug: string) {
+export function getInvitationBySlug(slug: string): DbResult<DbRow<Invitation> | null> {
   const d = getDb();
   const row = d.prepare('SELECT * FROM invitations WHERE slug = ?').get(slug) as Record<string, unknown> | undefined;
-  return { data: row ?? null, error: row ? null : { message: 'Not found' } };
+  return typedRow<Invitation>(row);
 }
 
-export function getInvitationsByEvent(eventId: string) {
+export function getInvitationsByEvent(eventId: string): DbResult<Array<DbRow<Invitation>>> {
   const d = getDb();
   const rows = d.prepare('SELECT * FROM invitations WHERE event_id = ? ORDER BY created_at ASC').all(eventId) as Record<string, unknown>[];
-  return { data: rows, error: null };
+  return { data: rows as Array<DbRow<Invitation>>, error: null };
 }
 
 export function createInvitations(invitations: Array<{ event_id: string; event_slug: string; name: string; email: string }>) {
@@ -332,16 +347,16 @@ export function linkInvitationToUser(invitationId: string, userId: string) {
 // ---------------------------------------------------------------------------
 // Preferences (was guest_preferences in Supabase)
 // ---------------------------------------------------------------------------
-export function getPreferencesByEvent(eventId: string) {
+export function getPreferencesByEvent(eventId: string): DbResult<Array<DbRow<GuestPreferences>>> {
   const d = getDb();
   const rows = d.prepare('SELECT * FROM preferences WHERE event_id = ?').all(eventId) as Record<string, unknown>[];
-  return { data: rows, error: null };
+  return { data: rows as Array<DbRow<GuestPreferences>>, error: null };
 }
 
-export function getPreferencesByInvitation(invitationId: string) {
+export function getPreferencesByInvitation(invitationId: string): DbResult<DbRow<GuestPreferences> | null> {
   const d = getDb();
   const row = d.prepare('SELECT * FROM preferences WHERE invitation_id = ?').get(invitationId) as Record<string, unknown> | undefined;
-  return { data: row ?? null, error: null };
+  return { data: (row as DbRow<GuestPreferences> | undefined) ?? null, error: null };
 }
 
 export function upsertPreferences(
@@ -406,10 +421,10 @@ export interface InsertProposalRow {
   confidence_score?: number | null;
 }
 
-export function getProposalsByEvent(eventId: string) {
+export function getProposalsByEvent(eventId: string): DbResult<Array<DbRow<Proposal>>> {
   const d = getDb();
   const rows = d.prepare('SELECT * FROM proposals WHERE event_id = ? ORDER BY rank ASC').all(eventId) as Record<string, unknown>[];
-  return { data: rows, error: null };
+  return { data: rows as Array<DbRow<Proposal>>, error: null };
 }
 
 export function insertProposals(rows: InsertProposalRow[]) {
@@ -477,20 +492,20 @@ export function replaceProposalsAndAdvance(eventId: string, rows: InsertProposal
 // ---------------------------------------------------------------------------
 // Votes
 // ---------------------------------------------------------------------------
-export function getVotesByEvent(eventId: string) {
+export function getVotesByEvent(eventId: string): DbResult<Array<DbRow<Vote>>> {
   const d = getDb();
   const rows = d.prepare(`
     SELECT v.* FROM votes v
     INNER JOIN proposals p ON p.id = v.proposal_id
     WHERE p.event_id = ?
   `).all(eventId) as Record<string, unknown>[];
-  return { data: rows, error: null };
+  return { data: rows as Array<DbRow<Vote>>, error: null };
 }
 
-export function getVotesByInvitation(invitationId: string) {
+export function getVotesByInvitation(invitationId: string): DbResult<Array<DbRow<Vote>>> {
   const d = getDb();
   const rows = d.prepare('SELECT * FROM votes WHERE invitation_id = ?').all(invitationId) as Record<string, unknown>[];
-  return { data: rows, error: null };
+  return { data: rows as Array<DbRow<Vote>>, error: null };
 }
 
 export function upsertVote(proposalId: string, invitationId: string, rank: number) {
@@ -506,10 +521,10 @@ export function upsertVote(proposalId: string, invitationId: string, rank: numbe
 // ---------------------------------------------------------------------------
 // Finalized Plans
 // ---------------------------------------------------------------------------
-export function getFinalizedPlanByEvent(eventId: string) {
+export function getFinalizedPlanByEvent(eventId: string): DbResult<DbRow<FinalizedPlan> | null> {
   const d = getDb();
   const row = d.prepare('SELECT * FROM finalized_plans WHERE event_id = ? ORDER BY created_at DESC LIMIT 1').get(eventId) as Record<string, unknown> | undefined;
-  return { data: row ?? null, error: row ? null : { message: 'Not found' } };
+  return typedRow<FinalizedPlan>(row);
 }
 
 // ---------------------------------------------------------------------------

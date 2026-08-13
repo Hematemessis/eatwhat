@@ -98,7 +98,7 @@ function isWithinBudget(priceRange: string, maxBudget: number): boolean {
 export function extractBudgetNumber(feedbackText: string): number | null {
   const match = feedbackText.match(/(\d+)/);
   if (match) {
-    const n = parseInt(match[1], 10);
+    const n = parseInt(match[1]!, 10);
     if (n >= 10 && n <= 2000) return n;
   }
   return null;

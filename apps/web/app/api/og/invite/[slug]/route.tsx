@@ -67,9 +67,9 @@ export async function GET(_request: Request, { params }: Context) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
           <div style={{ fontSize: 34, color: '#57534E' }}>You&apos;re invited to</div>
           <div style={{ fontSize: 84, fontWeight: 800, letterSpacing: -4, lineHeight: 0.95, maxWidth: 900 }}>
-            {evt.title as string}
+            {String(evt.title)}
           </div>
-          {evt.location_hint && (
+          {Boolean(evt.location_hint) && (
             <div style={{ fontSize: 32, color: '#44403C' }}>{evt.location_hint as string}</div>
           )}
         </div>

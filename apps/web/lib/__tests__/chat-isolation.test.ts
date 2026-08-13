@@ -1,3 +1,5 @@
+// @vitest-environment jsdom
+
 import { describe, it, expect, beforeEach } from "vitest";
 
 const saveChat = (userName: string, messages: unknown[], complete: boolean) => {

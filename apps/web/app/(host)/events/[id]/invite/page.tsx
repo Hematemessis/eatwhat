@@ -33,7 +33,7 @@ export default async function InvitePage({ params }: Props) {
       </div>
 
       <div style={{ background: 'var(--surface)', borderRadius: 'var(--r)', border: '1px solid var(--border2)', padding: '28px 28px 24px', boxShadow: 'var(--sh)', animation: 'fu .4s var(--sp) both' }}>
-        <InviteManager eventId={id} initialInvitations={invitations ?? []} />
+        <InviteManager eventId={id} initialInvitations={invitations} />
       </div>
     </main>
   );

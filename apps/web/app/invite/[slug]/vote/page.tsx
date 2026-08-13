@@ -56,7 +56,7 @@ export default async function VotePage({ params }: Props) {
         </p>
 
         <VotingInterface
-          proposals={proposals as unknown[]}
+          proposals={proposals}
           token={slug}
           initialRankings={initialRankings}
         />

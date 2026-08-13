@@ -43,7 +43,7 @@ export default async function PreferencesPage({ params }: Props) {
         </div>
 
         <div style={{ background: 'var(--surface)', borderRadius: 'var(--r)', border: '1px solid var(--border2)', boxShadow: 'var(--sh)', padding: '28px', animation: 'fu .4s var(--sp) .05s both' }}>
-          <PreferenceForm token={slug} existing={existing ?? null} category={((event as Record<string, unknown> | null)?.category as string) ?? "dinner"} />
+          <PreferenceForm token={slug} existing={existing} category={event?.category ?? 'dinner'} />
         </div>
       </div>
     </main>

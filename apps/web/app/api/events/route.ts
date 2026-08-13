@@ -15,7 +15,7 @@ export async function GET() {
   // Hardcoded demo host — Supabase auth removed
   const hostId = 'demo-host';
   const { data: events, error } = getEventsByHost(hostId);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: String(error) }, { status: 500 });
 
   return NextResponse.json({ events });
 }
@@ -33,7 +33,7 @@ export async function POST(request: Request) {
   const slug = slugify(parsed.data.title);
   const { data: event, error } = createEvent(hostId, parsed.data as Record<string, unknown>, slug);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: String(error) }, { status: 500 });
 
   return NextResponse.json({ event }, { status: 201 });
 }

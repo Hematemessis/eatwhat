@@ -26,12 +26,12 @@ export default function GuestStatusList({ eventId, initialInvitations }: Props) 
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'invitations', filter: `event_id=eq.${eventId}` },
-        (payload) => {
+        (payload: { eventType: string; new: Record<string, unknown>; old: Record<string, unknown> }) => {
           if (payload.eventType === 'INSERT') {
-            setInvitations((prev) => [...prev, payload.new as Invitation]);
+            setInvitations((prev) => [...prev, payload.new as unknown as Invitation]);
           } else if (payload.eventType === 'UPDATE') {
             setInvitations((prev) =>
-              prev.map((inv) => (inv.id === payload.new['id'] ? (payload.new as Invitation) : inv)),
+              prev.map((inv) => (inv.id === payload.new['id'] ? (payload.new as unknown as Invitation) : inv)),
             );
           } else if (payload.eventType === 'DELETE') {
             setInvitations((prev) => prev.filter((inv) => inv.id !== payload.old['id']));

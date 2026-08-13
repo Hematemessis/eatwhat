@@ -51,7 +51,7 @@ export async function PATCH(request: Request, { params }: Context) {
   }
 
   const { data: updated, error } = updateEvent(id, parsed.data as Record<string, unknown>);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: String(error) }, { status: 500 });
 
   return NextResponse.json({ event: updated });
 }
@@ -66,7 +66,7 @@ export async function DELETE(_req: Request, { params }: Context) {
   }
 
   const { error } = deleteEvent(id);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: String(error) }, { status: 500 });
 
   return new NextResponse(null, { status: 204 });
 }

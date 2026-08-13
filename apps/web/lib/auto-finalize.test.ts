@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('@/lib/supabase/server', () => ({ createServiceClient: vi.fn() }));
-vi.mock('@groupplan/db', () => ({
+vi.mock('@/lib/db', () => ({
+  getDb: vi.fn(),
   getProposalsByEvent: vi.fn(),
   getVotesByEvent: vi.fn(),
   getInvitationsByEvent: vi.fn(),
@@ -13,8 +13,12 @@ vi.mock('@/lib/notifications', () => ({
 }));
 
 import { maybeAutoFinalize } from './auto-finalize';
-import { createServiceClient } from '@/lib/supabase/server';
-import { getProposalsByEvent, getVotesByEvent, getInvitationsByEvent } from '@groupplan/db';
+import {
+  getDb,
+  getInvitationsByEvent,
+  getProposalsByEvent,
+  getVotesByEvent,
+} from '@/lib/db';
 import { getNotificationService, sendBatch } from '@/lib/notifications';
 
 const EVENT_ID = 'event-1';
@@ -29,12 +33,12 @@ const BASE_EVENT = {
 };
 
 const PROPOSALS = [
-  { id: 'proposal-1', restaurant_name: 'Sushi Spot', restaurant_addr: '1 Main St', suggested_time: null },
+  { id: WINNER_ID, restaurant_name: 'Sushi Spot', restaurant_addr: '1 Main St', suggested_time: null },
   { id: 'proposal-2', restaurant_name: 'Pizza Place', restaurant_addr: '2 Elm St', suggested_time: null },
 ];
 
 const VOTES = [
-  { proposal_id: 'proposal-1', invitation_id: 'inv-1', rank: 1 },
+  { proposal_id: WINNER_ID, invitation_id: 'inv-1', rank: 1 },
   { proposal_id: 'proposal-2', invitation_id: 'inv-1', rank: 2 },
 ];
 
@@ -43,185 +47,129 @@ const INVITATIONS = [
   { id: 'inv-2', name: 'Bob', email: 'bob@example.com', status: 'pending' },
 ];
 
-function makeDb(opts: { event?: object | null; flipResult?: object | null } = {}) {
-  const event = opts.event !== undefined ? opts.event : BASE_EVENT;
-  const flipResult = opts.flipResult !== undefined ? opts.flipResult : { id: EVENT_ID };
-  const singleMock = vi.fn()
-    .mockResolvedValueOnce({ data: event })
-    .mockResolvedValueOnce({ data: flipResult });
-  const chainable = {
-    select: vi.fn().mockReturnThis(),
-    update: vi.fn().mockReturnThis(),
-    insert: vi.fn().mockResolvedValue({ data: null, error: null }),
-    eq: vi.fn().mockReturnThis(),
-    single: singleMock,
-  };
-  return { from: vi.fn().mockReturnValue(chainable), _chainable: chainable };
+function makeDb(options: { event?: object | null; flipChanges?: number } = {}) {
+  const event = options.event === undefined ? BASE_EVENT : options.event;
+  const insertRun = vi.fn().mockReturnValue({ changes: 1 });
+  const updateRun = vi.fn().mockReturnValue({ changes: options.flipChanges ?? 1 });
+  const prepare = vi.fn((sql: string) => {
+    if (sql.includes('SELECT id, title, status')) {
+      return { get: vi.fn().mockReturnValue(event) };
+    }
+    if (sql.includes("UPDATE events SET status = 'finalized'")) {
+      return { run: updateRun };
+    }
+    if (sql.includes('INSERT INTO finalized_plans')) {
+      return { run: insertRun };
+    }
+    throw new Error(`Unexpected SQL in test: ${sql}`);
+  });
+
+  return { prepare, insertRun, updateRun };
 }
 
 describe('maybeAutoFinalize', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    const defaultDb = makeDb();
-    vi.mocked(createServiceClient).mockReturnValue(defaultDb as unknown as ReturnType<typeof createServiceClient>);
-    vi.mocked(getProposalsByEvent).mockResolvedValue({ data: PROPOSALS } as unknown as Awaited<ReturnType<typeof getProposalsByEvent>>);
-    vi.mocked(getVotesByEvent).mockResolvedValue({ data: VOTES } as unknown as Awaited<ReturnType<typeof getVotesByEvent>>);
-    vi.mocked(getInvitationsByEvent).mockResolvedValue({ data: INVITATIONS } as unknown as Awaited<ReturnType<typeof getInvitationsByEvent>>);
+    vi.mocked(getDb).mockReturnValue(makeDb() as never);
+    vi.mocked(getProposalsByEvent).mockReturnValue({ data: PROPOSALS } as never);
+    vi.mocked(getVotesByEvent).mockReturnValue({ data: VOTES } as never);
+    vi.mocked(getInvitationsByEvent).mockReturnValue({ data: INVITATIONS } as never);
     vi.mocked(getNotificationService).mockReturnValue({ notify: vi.fn() });
   });
 
   it('returns false when event is not found', async () => {
-    const db = makeDb({ event: null });
-    vi.mocked(createServiceClient).mockReturnValue(db as unknown as ReturnType<typeof createServiceClient>);
-
+    vi.mocked(getDb).mockReturnValue(makeDb({ event: null }) as never);
     await expect(maybeAutoFinalize(EVENT_ID)).resolves.toBe(false);
   });
 
   it('returns false when event status is not deciding', async () => {
-    const db = makeDb({ event: { ...BASE_EVENT, status: 'open' } });
-    vi.mocked(createServiceClient).mockReturnValue(db as unknown as ReturnType<typeof createServiceClient>);
-
+    vi.mocked(getDb).mockReturnValue(makeDb({ event: { ...BASE_EVENT, status: 'open' } }) as never);
     await expect(maybeAutoFinalize(EVENT_ID)).resolves.toBe(false);
   });
 
   it('returns false when vote_deadline is null', async () => {
-    const db = makeDb({ event: { ...BASE_EVENT, vote_deadline: null } });
-    vi.mocked(createServiceClient).mockReturnValue(db as unknown as ReturnType<typeof createServiceClient>);
-
+    vi.mocked(getDb).mockReturnValue(makeDb({ event: { ...BASE_EVENT, vote_deadline: null } }) as never);
     await expect(maybeAutoFinalize(EVENT_ID)).resolves.toBe(false);
   });
 
   it('returns false when vote_deadline is in the future', async () => {
-    const db = makeDb({ event: { ...BASE_EVENT, vote_deadline: new Date(Date.now() + 60_000).toISOString() } });
-    vi.mocked(createServiceClient).mockReturnValue(db as unknown as ReturnType<typeof createServiceClient>);
-
+    vi.mocked(getDb).mockReturnValue(makeDb({
+      event: { ...BASE_EVENT, vote_deadline: new Date(Date.now() + 60_000).toISOString() },
+    }) as never);
     await expect(maybeAutoFinalize(EVENT_ID)).resolves.toBe(false);
   });
 
   it('returns false when there are no proposals', async () => {
-    vi.mocked(getProposalsByEvent).mockResolvedValueOnce({ data: [] } as unknown as unknown as Awaited<ReturnType<typeof getProposalsByEvent>>);
-
+    vi.mocked(getProposalsByEvent).mockReturnValueOnce({ data: [] } as never);
     await expect(maybeAutoFinalize(EVENT_ID)).resolves.toBe(false);
   });
 
-  it('returns false when all Borda scores are zero (no votes)', async () => {
-    vi.mocked(getVotesByEvent).mockResolvedValueOnce({ data: [] } as unknown as Awaited<ReturnType<typeof getVotesByEvent>>);
-
+  it('returns false when all Borda scores are zero', async () => {
+    vi.mocked(getVotesByEvent).mockReturnValueOnce({ data: [] } as never);
     await expect(maybeAutoFinalize(EVENT_ID)).resolves.toBe(false);
   });
 
-  it('returns false when no confirmed_time is available', async () => {
-    const db = makeDb({ event: { ...BASE_EVENT, proposed_date: null } });
-    vi.mocked(createServiceClient).mockReturnValue(db as unknown as ReturnType<typeof createServiceClient>);
-    vi.mocked(getVotesByEvent).mockResolvedValueOnce({ data: VOTES } as unknown as Awaited<ReturnType<typeof getVotesByEvent>>);
-
+  it('returns false when no confirmed time is available', async () => {
+    vi.mocked(getDb).mockReturnValue(makeDb({ event: { ...BASE_EVENT, proposed_date: null } }) as never);
+    vi.mocked(getProposalsByEvent).mockReturnValue({
+      data: PROPOSALS.map((proposal) => ({ ...proposal, suggested_time: null })),
+    } as never);
     await expect(maybeAutoFinalize(EVENT_ID)).resolves.toBe(false);
   });
 
-  it('returns false when concurrent-write guard fails', async () => {
-    const db = makeDb({ flipResult: null });
-    vi.mocked(createServiceClient).mockReturnValue(db as unknown as ReturnType<typeof createServiceClient>);
-
+  it('returns false when the concurrent-write guard fails', async () => {
+    vi.mocked(getDb).mockReturnValue(makeDb({ flipChanges: 0 }) as never);
     await expect(maybeAutoFinalize(EVENT_ID)).resolves.toBe(false);
   });
 
-  it('returns true and inserts finalized_plan with correct fields', async () => {
-    const insertSpy = vi.fn().mockResolvedValue({ data: null, error: null });
-    const singleMock = vi.fn()
-      .mockResolvedValueOnce({ data: BASE_EVENT })
-      .mockResolvedValueOnce({ data: { id: EVENT_ID } });
-    const dbWithSpy = {
-      from: vi.fn().mockReturnValue({
-        select: vi.fn().mockReturnThis(),
-        update: vi.fn().mockReturnThis(),
-        insert: insertSpy,
-        eq: vi.fn().mockReturnThis(),
-        single: singleMock,
-      }),
-    };
-    vi.mocked(createServiceClient).mockReturnValue(dbWithSpy as unknown as ReturnType<typeof createServiceClient>);
+  it('inserts the finalized plan with calendar data', async () => {
+    const db = makeDb();
+    vi.mocked(getDb).mockReturnValue(db as never);
 
-    const result = await maybeAutoFinalize(EVENT_ID);
+    await expect(maybeAutoFinalize(EVENT_ID)).resolves.toBe(true);
+    expect(db.insertRun).toHaveBeenCalledOnce();
 
-    expect(result).toBe(true);
-    expect(insertSpy).toHaveBeenCalledWith(expect.objectContaining({
-      event_id: EVENT_ID,
-      proposal_id: WINNER_ID,
-      calendar_data: expect.objectContaining({
-        title: BASE_EVENT.title,
-        location: PROPOSALS[0]!.restaurant_addr,
-        attendees: [{ name: 'Alice', email: 'alice@example.com' }],
-      }),
-    }));
+    const [, eventId, proposalId, confirmedTime, notes, calendarJson] = db.insertRun.mock.calls[0]!;
+    expect(eventId).toBe(EVENT_ID);
+    expect(proposalId).toBe(WINNER_ID);
+    expect(confirmedTime).toBe(BASE_EVENT.proposed_date);
+    expect(notes).toContain('Auto-finalized');
+    expect(JSON.parse(calendarJson as string)).toMatchObject({
+      title: BASE_EVENT.title,
+      location: PROPOSALS[0]!.restaurant_addr,
+      attendees: [{ name: 'Alice', email: 'alice@example.com' }],
+    });
   });
 
-  it('sends winner-announced emails to accepted invitees only', async () => {
-    const insertSpy = vi.fn().mockResolvedValue({ data: null, error: null });
-    const singleMock = vi.fn()
-      .mockResolvedValueOnce({ data: BASE_EVENT })
-      .mockResolvedValueOnce({ data: { id: EVENT_ID } });
-    const dbWithSpy = {
-      from: vi.fn().mockReturnValue({
-        select: vi.fn().mockReturnThis(),
-        update: vi.fn().mockReturnThis(),
-        insert: insertSpy,
-        eq: vi.fn().mockReturnThis(),
-        single: singleMock,
-      }),
-    };
-    vi.mocked(createServiceClient).mockReturnValue(dbWithSpy as unknown as ReturnType<typeof createServiceClient>);
-
+  it('sends winner emails to accepted invitees only', async () => {
     await maybeAutoFinalize(EVENT_ID);
 
-    expect(sendBatch).toHaveBeenCalled();
-    const callArgs = vi.mocked(sendBatch).mock.calls[0]!;
-    const messages = callArgs[1];
-    expect(messages.length).toBe(1);
-    expect(messages[0]!.to.name).toBe('Alice');
-    expect(messages[0]!.template).toBe('winner-announced');
+    expect(sendBatch).toHaveBeenCalledOnce();
+    const messages = vi.mocked(sendBatch).mock.calls[0]![1];
+    expect(messages).toHaveLength(1);
+    expect(messages[0]).toMatchObject({
+      to: { name: 'Alice', email: 'alice@example.com' },
+      template: 'winner-announced',
+    });
   });
 
-  it('skips sendBatch when getNotificationService returns null', async () => {
-    const insertSpy = vi.fn().mockResolvedValue({ data: null, error: null });
-    const singleMock = vi.fn()
-      .mockResolvedValueOnce({ data: BASE_EVENT })
-      .mockResolvedValueOnce({ data: { id: EVENT_ID } });
-    const dbWithSpy = {
-      from: vi.fn().mockReturnValue({
-        select: vi.fn().mockReturnThis(),
-        update: vi.fn().mockReturnThis(),
-        insert: insertSpy,
-        eq: vi.fn().mockReturnThis(),
-        single: singleMock,
-      }),
-    };
-    vi.mocked(createServiceClient).mockReturnValue(dbWithSpy as unknown as ReturnType<typeof createServiceClient>);
+  it('skips notifications when no service is configured', async () => {
     vi.mocked(getNotificationService).mockReturnValueOnce(null);
-
     await maybeAutoFinalize(EVENT_ID);
-
-    expect(vi.mocked(sendBatch)).not.toHaveBeenCalled();
+    expect(sendBatch).not.toHaveBeenCalled();
   });
 
   it('selects the highest Borda score winner', async () => {
-    const insertSpy = vi.fn().mockResolvedValue({ data: null, error: null });
-    const singleMock = vi.fn()
-      .mockResolvedValueOnce({ data: BASE_EVENT })
-      .mockResolvedValueOnce({ data: { id: EVENT_ID } });
-    const dbWithSpy = {
-      from: vi.fn().mockReturnValue({
-        select: vi.fn().mockReturnThis(),
-        update: vi.fn().mockReturnThis(),
-        insert: insertSpy,
-        eq: vi.fn().mockReturnThis(),
-        single: singleMock,
-      }),
-    };
-    vi.mocked(createServiceClient).mockReturnValue(dbWithSpy as unknown as ReturnType<typeof createServiceClient>);
-    vi.mocked(getVotesByEvent).mockResolvedValueOnce({ data: VOTES } as unknown as Awaited<ReturnType<typeof getVotesByEvent>>);
+    const db = makeDb();
+    vi.mocked(getDb).mockReturnValue(db as never);
+    vi.mocked(getVotesByEvent).mockReturnValueOnce({
+      data: [
+        { proposal_id: 'proposal-2', invitation_id: 'inv-1', rank: 1 },
+        { proposal_id: WINNER_ID, invitation_id: 'inv-1', rank: 2 },
+      ],
+    } as never);
 
     await maybeAutoFinalize(EVENT_ID);
-
-    expect(insertSpy).toHaveBeenCalledWith(expect.objectContaining({ proposal_id: 'proposal-1' }));
+    expect(db.insertRun.mock.calls[0]![2]).toBe('proposal-2');
   });
 });

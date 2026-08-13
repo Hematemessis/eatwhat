@@ -10,7 +10,11 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@groupplan/db": "workspace:*",
     "@groupplan/types": "workspace:*",
+    "@sendgrid/mail": "^8.1.5",
+    "@supabase/ssr": "^0.8.0",
+    "@supabase/supabase-js": "^2.105.3",
     "better-sqlite3": "^12.10.0",
     "ics": "^3.7.0",
     "next": "^15",
