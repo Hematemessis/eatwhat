@@ -68,11 +68,11 @@ export default async function ResultsPage({ params }: Props) {
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
                     <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--fb)', letterSpacing: '-.01em' }}>{p.restaurant_name as string}</span>
-                    {p.cuisine_type && <span style={{ fontSize: 12, color: 'var(--muted)', fontFamily: 'var(--fb)' }}>{p.cuisine_type as string}</span>}
-                    {p.price_range && <span style={{ fontSize: 12, color: 'var(--muted)', fontFamily: 'var(--fb)' }}>{p.price_range as string}</span>}
+                    {Boolean(p.cuisine_type) && <span style={{ fontSize: 12, color: 'var(--muted)', fontFamily: 'var(--fb)' }}>{String(p.cuisine_type)}</span>}
+                    {Boolean(p.price_range) && <span style={{ fontSize: 12, color: 'var(--muted)', fontFamily: 'var(--fb)' }}>{String(p.price_range)}</span>}
                   </div>
-                  {p.reasoning && (
-                    <p style={{ fontSize: 13, color: 'var(--muted)', fontFamily: 'var(--fb)', margin: '6px 0 0', lineHeight: 1.55 }}>{p.reasoning as string}</p>
+                  {Boolean(p.reasoning) && (
+                    <p style={{ fontSize: 13, color: 'var(--muted)', fontFamily: 'var(--fb)', margin: '6px 0 0', lineHeight: 1.55 }}>{String(p.reasoning)}</p>
                   )}
                   {isWinner && (
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 10, fontSize: 11, fontWeight: 600, color: accent, fontFamily: 'var(--fb)', background: 'var(--bg)', border: `1px solid ${accent}`, borderRadius: 6, padding: '3px 9px' }}>

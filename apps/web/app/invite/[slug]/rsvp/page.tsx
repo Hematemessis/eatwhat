@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import type { InviteStatus } from '@groupplan/types';
 import { notFound } from 'next/navigation';
 import { getInvitationBySlug, getInvitationByToken, getEventById } from '@/lib/db';
 import RSVPForm from '@/components/forms/RSVPForm';
@@ -45,7 +46,7 @@ export default async function RSVPPage({ params }: Props) {
             Hi {inv.name as string} — please respond by <strong data-testid="rsvp-deadline" style={{ color: 'var(--text)' }}>{deadlineDisplay}</strong>.
           </p>
 
-          {evt.description && (
+          {Boolean(evt.description) && (
             <p style={{ fontSize: 13, color: 'var(--muted)', fontFamily: 'var(--fb)', lineHeight: 1.55, margin: '0 0 24px', padding: '12px 14px', background: 'var(--bg)', borderRadius: 'var(--rs)', borderLeft: '2px solid var(--border2)' }}>
               {evt.description as string}
             </p>
@@ -58,7 +59,7 @@ export default async function RSVPPage({ params }: Props) {
               </p>
             </div>
           ) : (
-            <RSVPForm token={slug} currentStatus={inv.status as string} />
+            <RSVPForm token={slug} currentStatus={inv.status as InviteStatus} />
           )}
         </div>
 

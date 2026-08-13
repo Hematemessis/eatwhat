@@ -51,6 +51,7 @@ tools/qa/qa-results/
 tools/qa/.auth/
 
 # SQLite WAL
+*.db
 *.db-shm
 *.db-wal
 

@@ -84,9 +84,9 @@ export async function maybeAutoFinalize(eventId: string): Promise<boolean> {
         to: { name: inv.name, email: inv.email },
         template: 'winner-announced' as const,
         data: {
-          event_title: event.title,
-          restaurant_name: winner.restaurant_name,
-          restaurant_addr: winner.restaurant_addr,
+          event_title: String(event.title ?? ''),
+          restaurant_name: String(winner.restaurant_name ?? ''),
+          restaurant_addr: String(winner.restaurant_addr ?? ''),
           confirmed_time: confirmedDisplay,
           calendar_url: `${appUrl()}/api/events/${eventId}/calendar`,
         },

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import type React from 'react';
-import { createServiceClient } from '@/lib/supabase/server';
+import { getDb } from '@/lib/db';
 
 export const metadata: Metadata = { title: 'Cost dashboard' };
 
@@ -9,12 +9,29 @@ type DayStats = { day: string; totalCost: number; count: number };
 type EventCost = { eventId: string; totalCost: number; count: number };
 
 export default async function CostsPage() {
-  const serviceDb = createServiceClient();
-  const { data: rows } = await serviceDb
-    .from('ai_logs')
-    .select('stage, cost_micros, input_tokens, output_tokens, latency_ms, created_at, event_id, error');
-
-  const logs = rows ?? [];
+  type AiLogRow = {
+    stage: string;
+    cost_micros: number | null;
+    input_tokens: number | null;
+    output_tokens: number | null;
+    latency_ms: number | null;
+    created_at: string;
+    event_id: string;
+    error: string | null;
+  };
+  const db = getDb();
+  const logs = db.prepare(
+    `SELECT
+      COALESCE(provider, kind) AS stage,
+      cost_micros,
+      input_tokens,
+      output_tokens,
+      0 AS latency_ms,
+      created_at,
+      COALESCE(event_id, 'unassigned') AS event_id,
+      NULL AS error
+    FROM usage_log`,
+  ).all() as AiLogRow[];
 
   const stageMap = new Map<string, StageStats>();
   for (const row of logs) {
@@ -62,13 +79,14 @@ export default async function CostsPage() {
   const topEventIds = topEvents.map(e => e.eventId);
   const eventTitleMap = new Map<string, string>();
   if (topEventIds.length > 0) {
-    const { data: eventRows } = await serviceDb.from('events').select('id, title').in('id', topEventIds);
-    for (const ev of eventRows ?? []) {
+    const placeholders = topEventIds.map(() => '?').join(',');
+    const eventRows = db.prepare(`SELECT id, title FROM events WHERE id IN (${placeholders})`).all(...topEventIds) as Array<{ id: string; title: string }>;
+    for (const ev of eventRows) {
       eventTitleMap.set(ev.id, ev.title);
     }
   }
 
-  const totalCost = logs.reduce((sum, r) => sum + (r.cost_micros ?? 0), 0);
+  const totalCost = logs.reduce((sum: number, r: AiLogRow) => sum + (r.cost_micros ?? 0), 0);
   const totalRuns = logs.length;
   const avgCostPerRun = totalRuns > 0 ? totalCost / totalRuns : 0;
 

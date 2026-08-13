@@ -28,7 +28,7 @@ export default async function EventStatusPage({ params }: Props) {
 
   // Re-fetch event after potential auto-finalize so status is fresh
   const { data: freshEvent } = getEventBySlug(slug);
-  const currentEvent = (freshEvent ?? event) as Record<string, unknown>;
+  const currentEvent = freshEvent ?? event;
 
   const [{ data: invitations }, { data: finalizedPlan }] = await Promise.all([
     Promise.resolve(getInvitationsByEvent(currentId)),
@@ -47,22 +47,23 @@ export default async function EventStatusPage({ params }: Props) {
         <div style={{ marginBottom: 32, animation: 'fu .4s var(--sp) both' }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 12, padding: '4px 10px', borderRadius: 6, background: 'var(--surface)', border: '1px solid var(--border2)', fontSize: 11, fontWeight: 500, color: (STATUS_COLORS as Record<string, string>)[currentEvent.status as string] ?? 'var(--muted)', fontFamily: 'var(--fb)' }}>
             <span style={{ width: 6, height: 6, borderRadius: '50%', background: (STATUS_COLORS as Record<string, string>)[currentEvent.status as string] ?? 'var(--muted)', display: 'inline-block' }} />
-            {(STATUS_LABELS as Record<string, string>)[currentEvent.status as string] ?? currentEvent.status}
+            {String((STATUS_LABELS as Record<string, string>)[currentEvent.status] ?? currentEvent.status)}
           </div>
           <h1 style={{ fontFamily: 'var(--fd)', fontSize: 36, letterSpacing: '-.03em', color: 'var(--text)', margin: '0 0 8px', lineHeight: 1.05 }}>{currentEvent.title as string}</h1>
-          {currentEvent.description && (
+          {Boolean(currentEvent.description) && (
             <p style={{ fontSize: 14, color: 'var(--muted)', fontFamily: 'var(--fb)', margin: 0, lineHeight: 1.6 }}>{currentEvent.description as string}</p>
           )}
         </div>
 
         {/* Finalized restaurant card */}
-        {currentEvent.status === 'finalized' && plan?.proposals && (() => {
-          const venue = plan.proposals as Record<string, unknown>;
-          const confirmedDate = new Date(plan.confirmed_time as string);
+        {currentEvent.status === 'finalized' && Boolean(plan?.proposals) && (() => {
+          const finalized = plan!;
+          const venue = finalized.proposals as Record<string, unknown>;
+          const confirmedDate = new Date(finalized.confirmed_time as string);
           const dateStr = confirmedDate.toLocaleString('en-US', { weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' });
           return (
             <div style={{ background: 'var(--surface)', borderRadius: 'var(--r)', border: '1px solid var(--border2)', overflow: 'hidden', boxShadow: 'var(--sh)', animation: 'fu .4s var(--sp) .04s both', marginBottom: 24 }}>
-              {venue.image_url && (
+              {Boolean(venue.image_url) && (
                 <div style={{ height: 160, background: `url(${venue.image_url}) center/cover no-repeat`, borderBottom: '1px solid var(--border2)' }} />
               )}
               <div style={{ padding: '20px 24px' }}>
@@ -73,7 +74,7 @@ export default async function EventStatusPage({ params }: Props) {
                   {venue.restaurant_name as string}
                 </div>
                 <div style={{ fontSize: 13, color: 'var(--muted)', fontFamily: 'var(--fb)', marginBottom: 16 }}>
-                  {venue.cuisine_type as string}{venue.price_range ? ` · ${venue.price_range}` : ''}{venue.rating ? ` · ${(venue.rating as number).toFixed(1)}` : ''}
+                  {String(venue.cuisine_type ?? '')}{venue.price_range ? ` · ${String(venue.price_range)}` : ''}{venue.rating ? ` · ${Number(venue.rating).toFixed(1)}` : ''}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
@@ -81,7 +82,7 @@ export default async function EventStatusPage({ params }: Props) {
                       <circle cx="7" cy="6" r="2.5" stroke="var(--muted)" strokeWidth="1.3"/>
                       <path d="M7 1C4.8 1 3 2.8 3 5c0 3 4 8 4 8s4-5 4-8c0-2.2-1.8-4-4-4z" stroke="var(--muted)" strokeWidth="1.3" fill="none"/>
                     </svg>
-                    <span style={{ fontSize: 13, color: 'var(--muted)', fontFamily: 'var(--fb)', lineHeight: 1.4 }}>{venue.restaurant_addr as string}</span>
+                    <span style={{ fontSize: 13, color: 'var(--muted)', fontFamily: 'var(--fb)', lineHeight: 1.4 }}>{String(venue.restaurant_addr ?? '')}</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0 }}>
@@ -91,10 +92,10 @@ export default async function EventStatusPage({ params }: Props) {
                     <span style={{ fontSize: 13, color: 'var(--muted)', fontFamily: 'var(--fb)' }}>{dateStr}</span>
                   </div>
                 </div>
-                {plan.notes && (
-                  <p style={{ fontSize: 13, color: 'var(--muted)', fontFamily: 'var(--fb)', margin: '14px 0 0', lineHeight: 1.55, borderTop: '1px solid var(--border2)', paddingTop: 12 }}>{plan.notes as string}</p>
+                {Boolean(finalized.notes) && (
+                  <p style={{ fontSize: 13, color: 'var(--muted)', fontFamily: 'var(--fb)', margin: '14px 0 0', lineHeight: 1.55, borderTop: '1px solid var(--border2)', paddingTop: 12 }}>{finalized.notes as string}</p>
                 )}
-                {venue.maps_url && (
+                {Boolean(venue.maps_url) && (
                   <a
                     href={venue.maps_url as string}
                     target="_blank" rel="noopener noreferrer"
@@ -113,7 +114,7 @@ export default async function EventStatusPage({ params }: Props) {
           <div style={{ fontSize: 10, fontWeight: 500, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 16, fontFamily: 'var(--fb)' }}>
             Guest status
           </div>
-          <GuestStatusList eventId={currentId} initialInvitations={invitations ?? []} />
+          <GuestStatusList eventId={currentId} initialInvitations={invitations} />
         </div>
 
         {/* RSVP deadline */}

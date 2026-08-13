@@ -34,7 +34,7 @@ export async function POST(request: Request, { params }: Context) {
     email: g.email,
   }));
   const { data: invitations, error } = createInvitations(rows);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: String(error) }, { status: 500 });
 
   // Advance the event into 'collecting' on first invite
   if ((event as Record<string, unknown>).status === 'open') {

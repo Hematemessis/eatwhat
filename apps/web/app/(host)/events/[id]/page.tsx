@@ -21,7 +21,7 @@ export default async function EventPage({ params }: Props) {
 
   if (!event) notFound();
 
-  const evt = event as Record<string, unknown>;
+  const evt = event;
 
   const { data: invitations } = getInvitationsByEvent(id);
   const guestCounts = ((invitations ?? []) as Array<{ status: string }>).reduce(
@@ -59,7 +59,7 @@ export default async function EventPage({ params }: Props) {
         </div>
         <h1 style={{ fontFamily: 'var(--fd)', fontSize: 34, letterSpacing: '-.03em', color: 'var(--text)', lineHeight: 1.05, margin: '0 0 8px' }}>{evt.title as string}</h1>
         {evt.description && (
-          <p style={{ fontSize: 14, color: 'var(--muted)', fontFamily: 'var(--fb)', margin: 0, lineHeight: 1.6 }}>{evt.description as string}</p>
+          <p style={{ fontSize: 14, color: 'var(--muted)', fontFamily: 'var(--fb)', margin: 0, lineHeight: 1.6 }}>{evt.description}</p>
         )}
       </div>
 
@@ -124,7 +124,7 @@ export default async function EventPage({ params }: Props) {
       </div>
 
       {(evt.status === 'collecting' || evt.status === 'deciding') && (
-        <AITriggerButton eventId={id} locationHint={evt.location_hint as string} eventStatus={evt.status as string} />
+        <AITriggerButton eventId={id} locationHint={evt.location_hint} eventStatus={evt.status} />
       )}
 
       <div style={{ background: 'var(--surface)', borderRadius: 'var(--r)', border: '1px solid var(--border2)', padding: '20px 24px', boxShadow: 'var(--sh)', animation: 'fu .4s var(--sp) .05s both' }}>

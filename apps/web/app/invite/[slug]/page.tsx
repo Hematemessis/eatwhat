@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { getInvitationByToken, getInvitationBySlug, getEventById, getInvitationsByEvent, getDb } from '@/lib/db';
+import { getInvitationByToken, getInvitationBySlug, getEventById, getInvitationsByEvent } from '@/lib/db';
 import InviteView from '@/components/invite-templates/InviteView';
 import PreviewBanner from '@/components/ui/PreviewBanner';
 import AcceptButton from './AcceptButton';
@@ -71,20 +71,17 @@ export default async function InvitePage({ params }: Props) {
   const { data: event } = getEventById(inv.event_id as string);
   if (!event) notFound();
 
-  const evt = event as Record<string, unknown>;
-  const db = getDb();
+  const evt = event;
 
   const { data: attendeeRows } = getInvitationsByEvent(inv.event_id as string);
   const acceptedAttendees = (attendeeRows as Array<Record<string, unknown>> | undefined)?.filter((a) => a.status === 'accepted') ?? [];
-  const host = db.prepare('SELECT name, email, avatar_url FROM events WHERE id = ?').get(inv.event_id as string) as Record<string, unknown> | undefined;
-
-  const hostName = host?.name ?? 'Your host';
+  const hostName = 'Your host';
   const attendees = (acceptedAttendees as Array<{ name: string }>).map((a) => ({ name: a.name, avatarUrl: null }));
   const visibleAttendees = attendees.slice(0, 5);
   const extraAttendees = Math.max(0, attendees.length - visibleAttendees.length);
   const dateDisplay = evt.date_flexible ? 'Date flexible' : formatDate(evt.proposed_date as string);
   const locationDisplay = (evt.location_hint as string) ?? 'Location to be confirmed';
-  const inviteViewInvitation = { ...invitation as object, invite_token: slug };
+  const inviteViewInvitation = { ...invitation, invite_token: slug };
 
   const isHostPreview = false; // Supabase auth removed
   const evtTemplateId = evt.template_id as string | undefined;
@@ -95,7 +92,7 @@ export default async function InvitePage({ params }: Props) {
       <InviteView
         invitation={inviteViewInvitation}
         event={event}
-        templateId={evtTemplateId}
+        templateId={evtTemplateId ?? 'classic'}
       />
 
       <main style={{ background: 'var(--bg)', padding: '36px 24px 60px' }}>

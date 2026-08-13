@@ -38,7 +38,7 @@ export async function POST(request: Request, { params }: Context) {
     parsed.data as Record<string, unknown>,
   );
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: String(error) }, { status: 500 });
 
   return NextResponse.json({ preferences });
 }
