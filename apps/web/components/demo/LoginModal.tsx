@@ -1,6 +1,6 @@
 "use client";
 import { useState, useCallback, KeyboardEvent } from "react";
-import { createGroup, joinGroup, loadGroup } from "@/lib/group-store";
+import { createDemoGroup, createGroup, joinGroup, loadGroup } from "@/lib/group-store";
 
 type Step = "idle" | "create" | "join";
 
@@ -11,7 +11,9 @@ const EVENT_TYPES: { value: "meal_only" | "activity_only" | "meal_activity" | "u
   { value: "undecided",    label: "还没想好" },
 ];
 
-export default function LoginModal({ onGroupReady, onClose }: { onGroupReady: (userName: string, isOwner: boolean) => void; onClose?: () => void }) {
+type NextTab = "overview" | "chat-preference";
+
+export default function LoginModal({ onGroupReady, onClose }: { onGroupReady: (userName: string, isOwner: boolean, nextTab?: NextTab) => void; onClose?: () => void }) {
   const [step, setStep] = useState<Step>("idle");
   const [name, setName] = useState("");
   const [nameError, setnameError] = useState("");
@@ -36,7 +38,7 @@ export default function LoginModal({ onGroupReady, onClose }: { onGroupReady: (u
     const trimmed = name.trim();
     if (!trimmed) return;
     createGroup(trimmed, eventType, location, maxMembers);
-    onGroupReady(trimmed, true);
+    onGroupReady(trimmed, true, "chat-preference");
   }, [name, eventType, location, maxMembers, onGroupReady]);
 
   const handleJoin = useCallback(async () => {
@@ -52,9 +54,14 @@ export default function LoginModal({ onGroupReady, onClose }: { onGroupReady: (u
     } else if (result === "FULL") {
       setInviteError("聚会已满员，无法加入");
     } else if (result) {
-      onGroupReady(trimmed, false);
+      onGroupReady(trimmed, false, "chat-preference");
     }
   }, [name, inviteCode, onGroupReady]);
+
+  const handleDemo = useCallback(() => {
+    createDemoGroup();
+    onGroupReady("小明", true, "overview");
+  }, [onGroupReady]);
 
   const handleCodeChange = useCallback((val: string) => {
     const digits = val.replace(/\D/g, "").slice(0, 4);
@@ -81,6 +88,7 @@ export default function LoginModal({ onGroupReady, onClose }: { onGroupReady: (u
   }, []);
 
   const showChoices = nameConfirmed && step === "idle";
+  const existingGroup = loadGroup();
 
   // ── styles (reusable) ──────────────────────────────────────────────────
   const s: Record<string, React.CSSProperties> = {
@@ -185,6 +193,32 @@ export default function LoginModal({ onGroupReady, onClose }: { onGroupReady: (u
                   >
                     继续 →
                   </button>
+                  {!existingGroup && (
+                    <>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "18px 0 14px" }}>
+                        <div style={{ height: 1, background: "var(--border2)", flex: 1 }} />
+                        <span style={{ fontSize: 10, color: "var(--muted)", fontFamily: "var(--fb)" }}>或</span>
+                        <div style={{ height: 1, background: "var(--border2)", flex: 1 }} />
+                      </div>
+                      <button
+                        onClick={handleDemo}
+                        data-testid="load-demo-case"
+                        style={{
+                          ...s.btn,
+                          background: "oklch(95% .04 228)",
+                          color: "oklch(38% .14 228)",
+                          border: "1px solid oklch(85% .08 228)",
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-1px)"; e.currentTarget.style.boxShadow = "var(--sh)"; }}
+                        onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "none"; }}
+                      >
+                        ✨ 体验完整案例（5 人）
+                      </button>
+                      <p style={{ ...s.sub, margin: "8px 6px 0", textAlign: "center", fontSize: 10 }}>
+                        一键载入口味、预算和忌口互相冲突的路演数据
+                      </p>
+                    </>
+                  )}
                 </>
               ) : (
                 <div style={{ animation: "fu .35s var(--sp) both" }}>
@@ -244,14 +278,14 @@ export default function LoginModal({ onGroupReady, onClose }: { onGroupReady: (u
               <h2 style={s.heading}>创建新聚会</h2>
               <p style={s.sub}>设置活动信息，然后邀请好友</p>
 
-              {loadGroup() && (
+              {existingGroup && (
                 <div style={{
                   padding: "10px 13px", borderRadius: "var(--rs)",
                   background: "oklch(96% .04 72)", border: "1px solid oklch(85% .08 72)",
                   fontSize: 12, color: "oklch(40% .14 72)", fontFamily: "var(--fb)",
                   marginBottom: 16, lineHeight: 1.5,
                 }}>
-                  ⚠️ 已有一个活跃聚会「{loadGroup()!.ownerName}的聚会」，创建新聚会将覆盖它。
+                  ⚠️ 已有一个活跃聚会「{existingGroup.ownerName}的聚会」，创建新聚会将覆盖它。
                 </div>
               )}
 

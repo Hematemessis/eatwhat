@@ -104,16 +104,20 @@ pnpm lint
 pnpm type-check
 pnpm test
 pnpm build
+pnpm qa:demo
 ```
 
-GitHub Actions 会在推送到 `main` 或创建 Pull Request 时执行上述检查。
+`qa:demo` 会用 Playwright 覆盖空状态、偏好门槛、双成员完整主流程和 5 人路演案例。GitHub Actions 会在推送到 `main` 或创建 Pull Request 时执行上述检查。
+
+餐厅候选数据的现状、实时 POI 接入方案与合规边界见 [docs/venue-data-strategy.md](docs/venue-data-strategy.md)。
 
 ## Roadmap
 
 - [ ] 重新联调独立分享链接和跨设备多人协作；
 - [ ] 完成手机端关键流程适配；
 - [ ] 统一 Demo 数据层与完整系统的数据模型；
-- [ ] 增加稳定的路演预置数据与一键重置；
+- [ ] 接入地图 POI 实时候选召回，并保留演示数据作为降级方案；
+- [x] 增加稳定的路演预置数据与一键重置；
 - [ ] 补充推荐质量、响应时间和完成率等产品指标。
 
 ## 协作说明

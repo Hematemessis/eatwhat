@@ -34,3 +34,9 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+      - name: Install Playwright browser
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Demo flow E2E
+        run: pnpm qa:demo

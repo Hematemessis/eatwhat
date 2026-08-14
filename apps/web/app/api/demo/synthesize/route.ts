@@ -28,17 +28,31 @@ export async function POST(request: NextRequest) {
         ? body.preferences
         : [];
 
-    // Load all venues from seed JSON, filter by location
+    const normalizedLocation = location.replace(/\s+/g, '');
+    const isGenericShenzhen = /^深圳市?$/.test(normalizedLocation);
+    const isCoveredDistrict = /南山|福田|后海|蛇口|科技园|车公庙|西丽/.test(normalizedLocation);
+    const supportedLocation = isGenericShenzhen || isCoveredDistrict;
+    if (!supportedLocation) {
+      return NextResponse.json(
+        { error: '当前演示候选库仅覆盖深圳南山和福田；接入实时地图 POI 后才能搜索其他城市。' },
+        { status: 422 },
+      );
+    }
+
+    // Load the demo venue pool and narrow it to the requested Shenzhen area.
     const allVenues = loadVenues();
+    const area = /福田|车公庙/.test(location)
+      ? '福田'
+      : /南山|后海|蛇口|科技园|西丽/.test(location)
+        ? '南山'
+        : '';
     const venueRecords: VenueRecord[] = allVenues
-      .filter((v) =>
-        v.address.includes(location.includes('南山') ? '南山' : location),
-      )
+      .filter((v) => !area || v.district.includes(area))
       .map(toVenueRecord);
 
     // Limit venues to avoid overwhelming the prompt (top 20 by rating)
     const venues =
-      (venueRecords.length > 0 ? venueRecords : allVenues.map(toVenueRecord))
+      venueRecords
         .sort((a, b) => b.rating - a.rating)
         .slice(0, 20);
 
@@ -46,13 +60,20 @@ export async function POST(request: NextRequest) {
       preferences,
       location,
       venues,
-      hostNotes:
-        '所有7个人都要能容纳的店，周五晚上聚餐派队，预算总体控制在中档',
+      hostNotes: `已收集 ${preferences.length} 位成员偏好；优先满足硬性忌口，并解释必要的群体妥协。`,
     };
 
     const result = await synthesizePlanWithDebug(input);
 
-    return NextResponse.json({ proposals: result.proposals, debug: result.debug });
+    return NextResponse.json({
+      proposals: result.proposals,
+      debug: result.debug,
+      venueSource: {
+        type: 'demo_seed',
+        coverage: ['深圳南山区', '深圳福田区'],
+        candidateCount: venues.length,
+      },
+    });
   } catch (err) {
     console.error('[synthesize] AI call failed:', err);
     return NextResponse.json(

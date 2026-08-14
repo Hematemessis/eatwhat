@@ -6,6 +6,7 @@
     "test": "vitest run",
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "qa:visual": "playwright test -c tools/qa/playwright.visual.config.ts",
+    "qa:demo": "playwright test -c tools/qa/playwright.demo.config.ts",
     "qa:checklist": "node tools/qa/qa-checklist.mjs",
     "build": "turbo run build",
     "dev": "turbo run dev",

@@ -35,4 +35,22 @@ describe('POST /api/demo/synthesize', () => {
     const body = await response.json();
     expect(body.error).toMatch(/DeepSeek API key/i);
   });
+
+  it.each(['广州市天河区', '深圳市龙岗区'])(
+    'rejects %s instead of returning unrelated Shenzhen venues',
+    async (location) => {
+      process.env.DEEPSEEK_API_KEY = 'test-key';
+
+      const response = await POST(
+        new NextRequest('http://localhost/api/demo/synthesize', {
+          method: 'POST',
+          body: JSON.stringify({ location }),
+        }),
+      );
+
+      expect(response.status).toBe(422);
+      const body = await response.json();
+      expect(body.error).toMatch(/仅覆盖深圳南山和福田/);
+    },
+  );
 });
