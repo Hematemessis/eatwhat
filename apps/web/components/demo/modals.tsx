@@ -180,7 +180,8 @@ export function CreateEventModal({ onClose }: { onClose: () => void }) {
 
 // ── Sidebar ───────────────────────────────────────────────────────────
 export function Sidebar({
-  activeTab, setTab, onInvite, onNewEvent, onBell, unreadCount, liveGuests, maxMembers,
+  activeTab, setTab, onInvite, onNewEvent, onBell, unreadCount, liveGuests, maxMembers, hasGroup,
+  preferenceCompleted, preferenceRequired, recommendationReady, location,
 }: {
   activeTab: string;
   setTab: (t: string) => void;
@@ -190,14 +191,19 @@ export function Sidebar({
   unreadCount: number;
   liveGuests: Guest[];
   maxMembers: number;
+  hasGroup: boolean;
+  preferenceCompleted: number;
+  preferenceRequired: number;
+  recommendationReady: boolean;
+  location?: string;
 }) {
   const confirmed = liveGuests.filter(g => g.status === "confirmed").length;
   const totalSlots = maxMembers || liveGuests.length;
   const tabs = [
     { id: "overview",       icon: "⊞", label: "概览" },
-    { id: "preferences",    icon: "◈", label: "偏好" },
-    { id: "chat-preference",icon: "🐦", label: "AI 对话" },
-    { id: "ai",             icon: "◆", label: "AI 推荐", badge: "新" },
+    { id: "chat-preference",icon: "🐦", label: "1 · AI 对话" },
+    { id: "preferences",    icon: "◈", label: "2 · 偏好进度", badge: recommendationReady ? `${preferenceCompleted} 已填` : `${preferenceCompleted}/${preferenceRequired}`, badgeColor: "neutral" as const },
+    { id: "ai",             icon: "◆", label: "3 · AI 推荐", badge: recommendationReady ? "就绪" : "未解锁", badgeColor: recommendationReady ? "green" as const : "neutral" as const },
   ];
 
   return (
@@ -232,17 +238,16 @@ export function Sidebar({
       {/* Event info */}
       <div style={{ padding: "18px 18px 14px", borderBottom: "1px solid var(--border2)", animation: "fu .5s var(--sp) .05s both" }}>
         <div style={{ marginBottom: 6 }}>
-          <Badge color="green">
+          <Badge color={hasGroup ? "green" : "neutral"}>
             <span style={{ width: 5, height: 5, borderRadius: "50%", background: "currentColor", display: "inline-block", animation: "pd 2s infinite" }} />
-            进行中
+            {hasGroup ? "进行中" : "等待开始"}
           </Badge>
         </div>
         <h1 style={{ fontFamily: "var(--fd)", fontSize: 20, lineHeight: 1.1, letterSpacing: "-.02em", marginTop: 7, marginBottom: 8, color: "var(--text)" }}>
-          周五<br />聚餐计划
+          {hasGroup ? <><span>周五</span><br /><span>聚餐计划</span></> : <><span>创建你的</span><br /><span>聚会计划</span></>}
         </h1>
         <div style={{ fontSize: 11, color: "var(--muted)", lineHeight: 1.8 }}>
-          <div>周五 19:00</div>
-          <div>深圳南山区</div>
+          {hasGroup ? <><div>周五 19:00</div><div>{location || "待确认区域"}</div></> : <><div>先设置身份和活动</div><div>再邀请成员填写偏好</div></>}
         </div>
       </div>
 
@@ -286,7 +291,7 @@ export function Sidebar({
             }}>
               <span style={{ fontSize: 11, opacity: .7 }}>{t.icon}</span>
               {t.label}
-              {t.badge && <span style={{ marginLeft: "auto" }}><Badge color="green">{t.badge}</Badge></span>}
+              {t.badge && <span style={{ marginLeft: "auto" }}><Badge color={t.badgeColor}>{t.badge}</Badge></span>}
             </button>
           );
         })}
@@ -294,11 +299,11 @@ export function Sidebar({
 
       {/* Bottom buttons */}
       <div style={{ padding: "8px 10px 16px", display: "flex", flexDirection: "column", gap: 5, animation: "fu .5s var(--sp) .4s both" }}>
-        <button onClick={onInvite}
+        <button onClick={hasGroup ? onInvite : onNewEvent}
           style={{ width: "100%", padding: 8, borderRadius: "var(--rs)", border: "1.5px dashed var(--border)", background: "transparent", fontSize: 11, fontWeight: 500, color: "var(--muted)", cursor: "pointer", fontFamily: "var(--fb)", transition: "all .2s" }}
           onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--text)"; e.currentTarget.style.color = "var(--text)"; }}
           onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--muted)"; }}>
-          + 邀请好友
+          {hasGroup ? "+ 邀请好友" : "+ 创建 / 加入聚会"}
         </button>
       </div>
     </aside>

@@ -75,7 +75,7 @@ const SYSTEM_PROMPT = `你是一只码头海鸥聚会参谋 🐦，性格俏皮�
 
 完成时在回复末尾加上：
 ---PREFERENCES---
-{"eventMode":"meal_only|activity_only|meal_activity|undecided","vibe":"用户的氛围","dietary":["忌口1"],"budget":"$|$$|$$$","location":"用户位置","activityType":[],"hardConstraints":[],"decisionStyle":"follow_group|guided_options_needed|自主决定","hometownHint":null,"handoffSummary":"一句话总结"}
+{"eventMode":"meal_only|activity_only|meal_activity|undecided","vibe":"用户的氛围","dietary":["忌口1"],"cuisine":["菜系1"],"budget":"$|$$|$$$","location":"用户位置","activityType":[],"hardConstraints":[],"decisionStyle":"follow_group|guided_options_needed|自主决定","hometownHint":null,"handoffSummary":"一句话总结"}
 
 注意：
 - ---PREFERENCES--- 前面是给用户看的自然对话，后面是结构化 JSON
@@ -86,9 +86,11 @@ const SYSTEM_PROMPT = `你是一只码头海鸥聚会参谋 🐦，性格俏皮�
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { message, roomId, conversationHistory } = body as {
+    const { message, roomId, conversationHistory, eventMode, eventLocation } = body as {
       message: string;
       roomId: string;
+      eventMode?: 'meal_only' | 'activity_only' | 'meal_activity' | 'undecided';
+      eventLocation?: string;
       conversationHistory: Array<{ role: string; content: string }>;
     };
 
@@ -112,8 +114,17 @@ export async function POST(request: Request) {
     const round = (roundMap.get(roomId) || 0) + 1;
     roundMap.set(roomId, round);
 
+    const allowedEventModes = ['meal_only', 'activity_only', 'meal_activity', 'undecided'] as const;
+    const selectedEventMode = allowedEventModes.find((mode) => mode === eventMode);
+    const selectedEventLocation = typeof eventLocation === 'string'
+      ? eventLocation.replace(/\s+/g, ' ').trim().slice(0, 80)
+      : '未填写';
+    const eventContext = selectedEventMode
+      ? `\n\n## 当前已创建的聚会\n创建者已经确定 eventMode=${selectedEventMode}，地点=${selectedEventLocation || '未填写'}。不要重复询问聚会模式；直接承接对话中已经给出的选项，继续收集该模式需要的菜系或活动偏好、忌口、预算和氛围。最终结构中的 eventMode 必须保持为 ${selectedEventMode}。`
+      : '';
+
     const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
-      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'system', content: SYSTEM_PROMPT + eventContext },
     ];
 
     const recentHistory = conversationHistory.slice(-12);
@@ -123,7 +134,7 @@ export async function POST(request: Request) {
     messages.push({ role: 'user', content: message });
 
     const completion = await openai.chat.completions.create({
-      model: 'deepseek-chat',
+      model: 'deepseek-v4-flash',
       messages,
       temperature: 0.8,
       max_tokens: 800,
@@ -179,4 +190,3 @@ export async function POST(request: Request) {
     );
   }
 }
-

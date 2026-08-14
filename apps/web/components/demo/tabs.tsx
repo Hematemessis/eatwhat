@@ -1,8 +1,9 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { Guest, Restaurant, Tweaks, avColor, bgMap, fgMap } from "./types";
-import { Av, Badge, Card, Btn, Bracket, SectionLabel } from "./ui";
+import { Av, Badge, Card, Bracket, SectionLabel } from "./ui";
 import { Activity } from "./types";
+import { getRecommendationReadiness, type GroupState, type RecommendationReadiness } from "@/lib/group-store";
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 function Counter({ to, duration = 900 }: { to: number; duration?: number }) {
@@ -75,7 +76,7 @@ function LiveActivity({ liveGuests }: { liveGuests: Guest[] }) {
 }
 
 // ── Massive Footer ───────────────────────────────────────────────────────────
-export function MassiveFooter({ eventName = "周五聚餐计划" }: { eventName?: string }) {
+export function MassiveFooter({ eventName = "周五聚餐计划", location = "深圳南山区" }: { eventName?: string; location?: string }) {
   return (
     <footer style={{ background: "var(--text)", marginTop: 72, position: "relative", overflow: "hidden" }}>
       <div style={{ position: "absolute", inset: 0, backgroundImage: "linear-gradient(var(--border2) 1px,transparent 1px),linear-gradient(90deg,var(--border2) 1px,transparent 1px)", backgroundSize: "40px 40px", opacity: .06, pointerEvents: "none" }} />
@@ -92,7 +93,7 @@ export function MassiveFooter({ eventName = "周五聚餐计划" }: { eventName?
             <div style={{ fontFamily: "var(--fd)", fontSize: 32, lineHeight: 1.1, letterSpacing: "-.03em", color: "white", marginBottom: 12 }}>{eventName}</div>
             <div style={{ fontSize: 12, color: "rgba(255,255,255,.45)", lineHeight: 1.7 }}>
               <div>周五 19:00</div>
-              <div>深圳南山区</div>
+              <div>{location}</div>
             </div>
           </div>
 
@@ -114,7 +115,7 @@ export function MassiveFooter({ eventName = "周五聚餐计划" }: { eventName?
 }
 
 // ── Overview Tab ─────────────────────────────────────────────────────────────
-export function OverviewTab({ setTab, liveGuests, inviteCode, isOwner }: { setTab: (t: string) => void; liveGuests: Guest[]; inviteCode?: string; isOwner?: boolean }) {
+export function OverviewTab({ setTab, liveGuests, inviteCode, isOwner, group }: { setTab: (t: string) => void; liveGuests: Guest[]; inviteCode?: string; isOwner?: boolean; group?: GroupState | null }) {
   const confirmed = liveGuests.filter(g => g.status === "confirmed");
   const dietary: Record<string, number> = {};
   confirmed.forEach(g => g.dietary.forEach(d => { dietary[d] = (dietary[d] || 0) + 1; }));
@@ -124,6 +125,41 @@ export function OverviewTab({ setTab, liveGuests, inviteCode, isOwner }: { setTa
   confirmed.forEach(g => { if (budgets[g.budget] !== undefined) budgets[g.budget] = (budgets[g.budget] ?? 0) + 1; });
   const topC = Object.entries(cuisines).sort((a, b) => b[1] - a[1]).slice(0, 5);
   const maxC = topC[0]?.[1] ?? 1;
+  const readiness = getRecommendationReadiness(group);
+  const hasGroup = Boolean(group);
+
+  if (!hasGroup) {
+    return (
+      <div data-testid="demo-empty-state" style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+        <div style={{ padding: "64px 48px 36px", borderBottom: "1px solid var(--border2)", position: "relative", overflow: "hidden" }}>
+          <div style={{ position: "absolute", right: 48, top: 24, fontFamily: "var(--fd)", fontSize: 150, lineHeight: 1, color: "var(--text)", opacity: .035, pointerEvents: "none" }}>?</div>
+          <SectionLabel style={{ marginBottom: 12 }}>开始一次群体决策</SectionLabel>
+          <h2 style={{ fontFamily: "var(--fd)", fontSize: 56, lineHeight: .98, letterSpacing: "-.04em", color: "var(--text)", marginBottom: 16 }}>
+            先把人聚齐，<br /><em>再让 AI 帮你拍板</em>
+          </h2>
+          <p style={{ maxWidth: 520, fontSize: 13, lineHeight: 1.7, color: "var(--muted)" }}>
+            创建或加入聚会后，成员分别填写口味、预算与忌口。收集到至少两份偏好，才会开放群体推荐。
+          </p>
+        </div>
+        <div style={{ padding: "28px 48px", maxWidth: 820 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 12 }}>
+            {[
+              ["01", "创建聚会", "设置地点与人数"],
+              ["02", "收集偏好", "至少两位成员完成"],
+              ["03", "生成方案", "比较约束与妥协"],
+            ].map(([index, title, description]) => (
+              <Card key={index} hover={false} style={{ padding: "20px 18px" }}>
+                <div style={{ fontFamily: "var(--fd)", fontSize: 11, color: "var(--muted)", marginBottom: 18 }}>{index}</div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>{title}</div>
+                <div style={{ fontSize: 11, color: "var(--muted)" }}>{description}</div>
+              </Card>
+            ))}
+          </div>
+        </div>
+        <MassiveFooter eventName="开始体验" location="待选择区域" />
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -146,7 +182,7 @@ export function OverviewTab({ setTab, liveGuests, inviteCode, isOwner }: { setTa
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
             <Badge color="green"><span style={{ width: 5, height: 5, borderRadius: "50%", background: "currentColor", display: "inline-block", animation: "pd 2s infinite" }} />进行中</Badge>
             <Badge>周五 19:00</Badge>
-            <Badge>深圳南山区</Badge>
+            <Badge>{group?.location || "待确认区域"}</Badge>
           </div>
         </div>
       </div>
@@ -229,19 +265,28 @@ export function OverviewTab({ setTab, liveGuests, inviteCode, isOwner }: { setTa
           <div style={{ position: "absolute", bottom: -20, left: 120, width: 80, height: 80, borderRadius: "50%", background: "rgba(255,255,255,.03)", pointerEvents: "none" }} />
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, position: "relative" }}>
             <div>
-              <div style={{ fontSize: 14, fontWeight: 500, color: "white", marginBottom: 2 }}>可以生成方案了</div>
-              <div style={{ fontSize: 11, color: "rgba(255,255,255,.45)" }}>已收集 {liveGuests.filter(g => g.vibe).length}/{liveGuests.filter(g => g.status !== "declined").length} 人偏好 — 信号够强了</div>
+              <div style={{ fontSize: 14, fontWeight: 500, color: "white", marginBottom: 2 }}>
+                {!hasGroup ? "先创建或加入聚会" : readiness.ready ? "可以生成群体方案了" : "还需要更多偏好"}
+              </div>
+              <div style={{ fontSize: 11, color: "rgba(255,255,255,.45)" }}>
+                {!hasGroup
+                  ? "完成身份设置后，再开始收集成员偏好"
+                  : readiness.ready
+                    ? `已收集 ${readiness.completed} 人偏好 — 群体决策信号已就绪`
+                    : `已收集 ${readiness.completed}/${readiness.required} 人偏好 · 还差 ${readiness.remaining} 人`}
+              </div>
             </div>
-            <button onClick={() => setTab("ai")}
+            <button onClick={() => setTab(readiness.ready ? "ai" : "chat-preference")}
+              data-testid="overview-primary-action"
               style={{ padding: "9px 18px", borderRadius: "var(--rs)", border: "1px solid rgba(255,255,255,.2)", background: "rgba(255,255,255,.12)", color: "white", fontSize: 12, fontWeight: 500, cursor: "pointer", fontFamily: "var(--fb)", whiteSpace: "nowrap", transition: "background .2s", backdropFilter: "blur(8px)" }}
               onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,.22)")}
               onMouseLeave={e => (e.currentTarget.style.background = "rgba(255,255,255,.12)")}>
-              Run AI →
+              {readiness.ready ? "生成方案 →" : "收集偏好 →"}
             </button>
           </div>
         </Card>
       </div>
-      <MassiveFooter />
+      <MassiveFooter location={group?.location} />
     </div>
   );
 }
@@ -346,7 +391,7 @@ export function PreferencesTab({ liveGuests }: { liveGuests: Guest[] }) {
 // ── AI Tab ───────────────────────────────────────────────────────────────────
 const AI_STEPS = [
   { l: "收集好友偏好", d: "饮食、口味、预算、氛围" },
-  { l: "搜索附近商家", d: "高德地图 POI API" },
+  { l: "召回候选商家", d: "当前：深圳本地演示数据" },
   { l: "构建决策提示词", d: "偏好矩阵 → 结构化输入" },
   { l: "DeepSeek 合成方案", d: "deepseek-v4-pro" },
   { l: "按偏好匹配排序", d: "每个方案的约束满足度" },
@@ -423,7 +468,7 @@ function RealRestCard({ p, delay, tweaks, open, onToggle }: { p: RealProposal; d
   const accent = accents[(p.rank - 1) % accents.length] ?? "var(--muted)";
   const metKeys = Object.entries(p.constraints_met).filter(([, v]) => v).map(([k]) => k);
   const gapKeys = Object.keys(p.constraints_gap);
-  const totalCount = Object.keys(p.constraints_met).length;
+  const totalCount = Object.keys(p.constraints_met).length + gapKeys.length;
   const matchPct = totalCount > 0 ? Math.round((metKeys.length / totalCount) * 100) : 90;
   const labelize = (k: string) => k.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
 
@@ -554,7 +599,7 @@ interface SynthesizeDebug {
   rawResponse: string;
 }
 
-export function AITab({ tweaks, addActivity, isOwner, group, onAiDone }: { tweaks: Tweaks; addActivity: (item: Omit<Activity, "id" | "read">) => void; isOwner?: boolean; group?: any; onAiDone?: (proposals: any[]) => void }) {
+export function AITab({ tweaks, addActivity, isOwner, group, onAiDone, readiness }: { tweaks: Tweaks; addActivity: (item: Omit<Activity, "id" | "read">) => void; isOwner?: boolean; group?: GroupState | null; onAiDone?: (proposals: RealProposal[]) => void; readiness?: RecommendationReadiness }) {
   const [phase, setPhase] = useState<"idle" | "running" | "done" | "error">(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("gp_ai") as any;
@@ -566,7 +611,7 @@ export function AITab({ tweaks, addActivity, isOwner, group, onAiDone }: { tweak
   });
   const [step, setStep]               = useState(0);
   const [open, setOpen]               = useState<Record<number, boolean>>({});
-  const [location, setLocation]       = useState("深圳南山区");
+  const [location, setLocation]       = useState(group?.location || "深圳南山区");
   const [realProposals, setReal]      = useState<RealProposal[]>(() => {
     try { return JSON.parse(localStorage.getItem("gp_ai_proposals") || "null") || []; } catch { return []; }
   });
@@ -577,12 +622,13 @@ export function AITab({ tweaks, addActivity, isOwner, group, onAiDone }: { tweak
   const [errorMsg, setErrorMsg]       = useState("");
   const [waitMsg, setWaitMsg]         = useState(0);
   const abortRef                      = useRef<AbortController | null>(null);
-  const storedProposals = group?.aiProposals;
+  const storedProposals = group?.aiProposals ?? [];
+  const recommendationReadiness = readiness ?? getRecommendationReadiness(group);
   useEffect(() => { localStorage.setItem("gp_ai", phase); }, [phase]);
 
   const WAIT_MESSAGES = [
-    "正在解析 6 人偏好矩阵…",
-    "正在匹配南山区 56 家商家…",
+    `正在解析 ${group?.members.length ?? 0} 人偏好矩阵…`,
+    "正在匹配当前候选商家…",
     "正在构建决策提示词…",
     "正在调用 DeepSeek 综合打分…",
     "正在解析 AI 推荐结果…",
@@ -590,6 +636,11 @@ export function AITab({ tweaks, addActivity, isOwner, group, onAiDone }: { tweak
   ];
 
   const run = async () => {
+    if (!recommendationReadiness.ready) {
+      setErrorMsg(`至少需要 ${recommendationReadiness.required} 位成员完成偏好，目前只有 ${recommendationReadiness.completed} 位。`);
+      setPhase("error");
+      return;
+    }
     setPhase("running"); setStep(0); setErrorMsg(""); setWaitMsg(0);
     const controller = new AbortController();
     abortRef.current = controller;
@@ -674,7 +725,7 @@ export function AITab({ tweaks, addActivity, isOwner, group, onAiDone }: { tweak
         <h2 style={{ fontFamily: "var(--fd)", fontSize: 48, lineHeight: .98, letterSpacing: "-.04em", color: "var(--text)", marginBottom: 10, textWrap: "balance" as React.CSSProperties["textWrap"] }}>
           帮你找到<br /><em>最合适的地方</em>
         </h2>
-        <p style={{ fontSize: 13, color: "var(--muted)", lineHeight: 1.65, maxWidth: 360 }}>AI 根据所有人的偏好，搜索周边真实商家，生成融合方案。</p>
+        <p style={{ fontSize: 13, color: "var(--muted)", lineHeight: 1.65, maxWidth: 420 }}>AI 根据所有人的偏好，从候选商家中比较硬约束与妥协项，生成融合方案。</p>
       </div>
       <div style={{ padding: "24px 32px", maxWidth: 640 }}>
         <Card delay={85} style={{ padding: "16px 18px", marginBottom: 16 }}>
@@ -686,6 +737,9 @@ export function AITab({ tweaks, addActivity, isOwner, group, onAiDone }: { tweak
             </div>
           ))}
         </Card>
+        <div data-testid="venue-data-source" style={{ marginBottom: 14, padding: "10px 12px", borderRadius: "var(--rs)", background: "oklch(96% .03 72)", border: "1px solid oklch(87% .06 72)", color: "oklch(42% .12 72)", fontSize: 11, lineHeight: 1.55, fontFamily: "var(--fb)" }}>
+          当前候选数据：深圳南山、福田共 56 家演示样本。实时 POI 数据源尚未接入，因此其他城市不会伪装成“真实搜索结果”。
+        </div>
         <div style={{ marginBottom: 12 }}>
           <label style={{ display: "block", fontSize: 10, fontWeight: 500, color: "var(--muted)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 6, fontFamily: "var(--fb)" }}>位置</label>
           <input
@@ -696,12 +750,24 @@ export function AITab({ tweaks, addActivity, isOwner, group, onAiDone }: { tweak
             onFocus={e => (e.currentTarget.style.borderColor = "var(--text)")}
             onBlur={e => (e.currentTarget.style.borderColor = "var(--border2)")}
           />
+          <div style={{ marginTop: 5, fontSize: 10, color: "var(--muted)", lineHeight: 1.5 }}>
+            当前版本建议使用深圳南山或福田；全国覆盖将在接入地图 POI 服务后开放。
+          </div>
         </div>
         {phase === "error" && <p style={{ fontSize: 12, color: "oklch(55% 0.18 26)", fontFamily: "var(--fb)", marginBottom: 10 }}>{errorMsg}</p>}
-        {isOwner ? (
-          <Btn onClick={run} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
+        {!recommendationReadiness.ready ? (
+          <div data-testid="ai-readiness-message" style={{ padding: "13px 15px", borderRadius: "var(--rs)", background: "oklch(95% .04 72)", border: "1px solid oklch(86% .08 72)", color: "oklch(44% .15 72)", fontSize: 12, lineHeight: 1.6, fontFamily: "var(--fb)" }}>
+            还不能生成群体方案：至少需要 {recommendationReadiness.required} 位成员完成偏好，目前已完成 {recommendationReadiness.completed} 位。
+          </div>
+        ) : isOwner ? (
+          <button
+            type="button"
+            onClick={run}
+            data-testid="generate-recommendations"
+            style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, background: "var(--text)", color: "var(--bg)", border: "none", padding: "11px 22px", borderRadius: "var(--rs)", fontWeight: 500, cursor: "pointer", fontFamily: "var(--fb)" }}
+          >
             生成方案 →
-          </Btn>
+          </button>
         ) : (
           <p style={{ fontSize: 12, color: "var(--muted)", fontFamily: "var(--fb)", padding: "12px 0" }}>
             等待群主生成方案…
@@ -755,15 +821,15 @@ export function AITab({ tweaks, addActivity, isOwner, group, onAiDone }: { tweak
         <h2 style={{ fontFamily: "var(--fd)", fontSize: 48, lineHeight: .98, letterSpacing: "-.04em", color: "var(--text)", marginBottom: 5, textWrap: "balance" as React.CSSProperties["textWrap"] }}>
           3 个推荐<br /><em style={{ color: "var(--muted)" }}>为你精选</em>
         </h2>
-        <p style={{ fontSize: 11, color: "var(--muted)" }}><strong style={{ color: "var(--text)" }}>{location}</strong> 的真实商家 · DeepSeek 根据 5 人偏好综合排序</p>
+        <p style={{ fontSize: 11, color: "var(--muted)" }}><strong style={{ color: "var(--text)" }}>{location}</strong> 的候选商家 · 根据 {group?.members.length ?? 0} 人偏好综合排序</p>
       </div>
       <div style={{ padding: "24px 32px 0", maxWidth: 760 }}>
         {realProposals.length > 0 ? (
           realProposals.map((p, i) => (
             <RealRestCard key={i} p={p} delay={i * 80} tweaks={tweaks} open={!!open[i]} onToggle={() => setOpen(prev => ({ ...prev, [i]: !prev[i] }))} />
           ))
-        ) : storedProposals?.length > 0 ? (
-          storedProposals.map((p: any, i: number) => (
+        ) : storedProposals.length > 0 ? (
+          storedProposals.map((p: RealProposal, i: number) => (
             <RealRestCard key={i} p={p} delay={i * 80} tweaks={tweaks} open={!!open[i]} onToggle={() => setOpen(prev => ({ ...prev, [i]: !prev[i] }))} />
           ))
         ) : null}

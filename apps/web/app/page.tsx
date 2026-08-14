@@ -6,7 +6,7 @@ import { Sidebar, ShareModal, CreateEventModal } from "../components/demo/modals
 import { NotificationPanel } from "../components/demo/notifications";
 import { OverviewTab, PreferencesTab, AITab } from "../components/demo/tabs";
 import ChatPreference from "../components/demo/ChatPreference";
-import { loadGroup, updateMemberPrefs, setMemberChatting, saveAiProposals, isOwner, clearGroup, type GroupState } from "@/lib/group-store";
+import { getRecommendationReadiness, loadGroup, updateMemberPrefs, saveAiProposals, clearGroup, type GroupState } from "@/lib/group-store";
 import LoginModal from "../components/demo/LoginModal";
 
 function TweaksPanel({ tweaks, setTweaks }: { tweaks: Tweaks; setTweaks: (t: Tweaks) => void }) {
@@ -43,10 +43,6 @@ function TweaksPanel({ tweaks, setTweaks }: { tweaks: Tweaks; setTweaks: (t: Twe
       </div>
     </div>
   );
-}
-
-function nameToIni(name: string): string {
-  return name.slice(0, 2).toUpperCase() || "??";
 }
 
 export default function App() {
@@ -144,7 +140,7 @@ export default function App() {
     });
   }, []);
 
-  const handleLoginReady = (userName: string, owner: boolean) => {
+  const handleLoginReady = (userName: string, owner: boolean, nextTab: "overview" | "chat-preference" = "overview") => {
     setCurrentUser(userName);
     setUserIsOwner(owner);
     const g = loadGroup();
@@ -158,6 +154,7 @@ export default function App() {
       })));
     }
     setShowLogin(false);
+    setTab(nextTab);
     localStorage.setItem("gp_current_user_v2", userName);
   };
 
@@ -184,10 +181,10 @@ export default function App() {
 
   const handlePrefsCollected = (userName: string, prefs: any) => {
     const updated = updateMemberPrefs(userName, {
-      vibe: prefs.vibe,
-      dietary: prefs.dietary,
-      cuisine: prefs.cuisine,
-      budget: prefs.budget,
+      vibe: prefs.vibe ?? null,
+      dietary: Array.isArray(prefs.dietary) ? prefs.dietary : [],
+      cuisine: Array.isArray(prefs.cuisine) ? prefs.cuisine : [],
+      budget: prefs.budget ?? "$$",
     });
     if (updated) {
       setGroup(updated);
@@ -207,11 +204,11 @@ export default function App() {
   };
 
   const displayGuests = supaGuests ?? liveGuests;
-  const tabProps = { tweaks, liveGuests: displayGuests, addActivity, setTab };
+  const recommendationReadiness = getRecommendationReadiness(group);
 
   return (
     <div className="gp-app-shell">
-      {showLogin && <LoginModal onGroupReady={handleLoginReady} onClose={() => setShowLogin(false)} />}
+      {showLogin && <LoginModal onGroupReady={handleLoginReady} onClose={group ? () => setShowLogin(false) : undefined} />}
       <header className="gp-mobile-topbar">
         <button
           onClick={() => setNavOpen(true)}
@@ -258,6 +255,11 @@ export default function App() {
           unreadCount={unread}
           liveGuests={displayGuests}
           maxMembers={group?.maxMembers ?? displayGuests.length}
+          hasGroup={Boolean(group)}
+          preferenceCompleted={recommendationReadiness.completed}
+          preferenceRequired={recommendationReadiness.required}
+          recommendationReady={recommendationReadiness.ready}
+          location={group?.location}
         />
       </div>
       <main style={{ flex: 1, overflowY: "auto", overflowX: "hidden", background: "var(--bg)", position: "relative" }}>
@@ -353,12 +355,22 @@ export default function App() {
             )}
           </div>
         )}
-        {tab === "overview"        && <OverviewTab    setTab={setTab} liveGuests={displayGuests} inviteCode={group?.inviteCode} isOwner={userIsOwner} />}
+        {tab === "overview"        && <OverviewTab    setTab={setTab} liveGuests={displayGuests} inviteCode={group?.inviteCode} isOwner={userIsOwner} group={group} />}
         {tab === "preferences"      && <PreferencesTab liveGuests={displayGuests} />}
         {tab === "chat-preference" && currentUser && (
-          <ChatPreference currentUser={currentUser} onPreferencesCollected={handlePrefsCollected} />
+          <ChatPreference
+            currentUser={currentUser}
+            eventType={group?.eventType}
+            eventLocation={group?.location}
+            inviteCode={group?.inviteCode}
+            isOwner={userIsOwner}
+            completedPreferences={recommendationReadiness.completed}
+            requiredPreferences={recommendationReadiness.required}
+            onNavigate={setTab}
+            onPreferencesCollected={handlePrefsCollected}
+          />
         )}
-        {tab === "ai"               && <AITab          tweaks={tweaks} addActivity={addActivity} isOwner={userIsOwner} group={group} onAiDone={handleAiDone} />}
+        {tab === "ai"               && <AITab          tweaks={tweaks} addActivity={addActivity} isOwner={userIsOwner} group={group} onAiDone={handleAiDone} readiness={recommendationReadiness} />}
       </main>
       {/* Floating gear button — always visible */}
       <button
